@@ -3,17 +3,17 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16
-    container_name: learning-postgres
+    container_name: dashboard-postgres
     environment:
-      POSTGRES_DB: learningdb
-      POSTGRES_USER: learninguser
-      POSTGRES_PASSWORD: learningpass
+      POSTGRES_DB: dashboarddb
+      POSTGRES_USER: dashboarduser
+      POSTGRES_PASSWORD: dashboardpass
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U learninguser -d learningdb"]
+      test: ["CMD-SHELL", "pg_isready -U dashboarduser -d dashboarddb"]
       interval: 10s
       timeout: 5s
       retries: 5
