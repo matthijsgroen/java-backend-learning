@@ -16,7 +16,8 @@ This is a Spring Boot 4.0.2 dashboarding application using **Java 25** with Post
 - Spring Boot 4.0.2 with Spring Modulith 2.0.2
 - Java 25 (uses modern features like records)
 - PostgreSQL 16 with JSONB support
-- JPA/Hibernate with automatic schema updates
+- JPA/Hibernate with automatic schema updates (Jackson databind for JSON support)
+- Springdoc OpenAPI 3.0.0 for auto-generated API documentation
 - Maven wrapper for builds (use `./mvnw`, not global Maven)
 
 ## Development Workflows
@@ -38,7 +39,9 @@ Or use VS Code's "Run: DashboardingApplication" terminal configuration.
 ./mvnw test
 ```
 - Use `@SpringBootTest` with `@AutoConfigureMockMvc` for integration tests
-- Example: [GreetingControllerTest.java](src/test/java/nl/kabisa/dashboarding/restservice/GreetingControllerTest.java)
+- Examples: 
+  - [GreetingControllerTest.java](src/test/java/nl/kabisa/dashboarding/restservice/GreetingControllerTest.java)
+  - [DashboardControllerTest.java](src/test/java/nl/kabisa/dashboarding/dashboard/DashboardControllerTest.java)
 
 ## Code Conventions & Patterns
 
@@ -63,7 +66,16 @@ Or use VS Code's "Run: DashboardingApplication" terminal configuration.
 - Mark with `@Repository` annotation
 - Example: [DashboardRepository.java](src/main/java/nl/kabisa/dashboarding/dashboard/DashboardRepository.java)
 
+## API Documentation
+
+### Swagger/OpenAPI Support
+- Auto-generated OpenAPI documentation via Springdoc OpenAPI 3.0.0
+- JSON endpoint: `http://localhost:8080/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Configured in [application.properties](src/main/resources/application.properties)
+
 ## Important Notes
 - **Always use `./mvnw`** (Maven wrapper) instead of system Maven for consistency
 - Database schema auto-updates via `spring.jpa.hibernate.ddl-auto=update` - suitable for learning, not production
 - Spring DevTools enabled for automatic reloading during development
+- Jackson databind is required for JSON/JSONB mapping with Hibernate
