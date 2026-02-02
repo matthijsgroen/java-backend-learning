@@ -61,11 +61,11 @@ public class WidgetControllerTest {
                     }]
                 }
                 """;
+
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(content()
                         .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
     }
-
 }

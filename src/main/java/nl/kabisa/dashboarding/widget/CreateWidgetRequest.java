@@ -1,14 +1,16 @@
 package nl.kabisa.dashboarding.widget;
 
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 /**
  * Widget creation request following ARCHITECTURE.md format.
  * Accepts nested JSON objects from frontend for flexible schema validation.
- * Uses Object to accept arbitrary JSON structures that can be stored in
- * PostgreSQL JSONB.
+ * ConfigurationModel is validated against the ConfigurationModelItem schema.
  */
 @Schema(description = "Widget creation request with configuration format specification")
 public record CreateWidgetRequest(
@@ -18,7 +20,7 @@ public record CreateWidgetRequest(
 
                 @NotNull(message = "Configuration cannot be null") @Schema(description = "Configuration values for this widget instance") Object configuration,
 
-                @NotNull(message = "Configuration model cannot be null") @Schema(description = "Metadata describing configuration structure and constraints") Object configurationModel,
+                @Valid @Schema(description = "Metadata describing configuration structure and constraints") List<ConfigurationModelItem> configurationModel,
 
                 @Schema(description = "Optional custom backend endpoints for widget data management") Object dataEndpoints) {
 }
