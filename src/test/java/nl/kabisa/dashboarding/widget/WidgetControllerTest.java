@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -24,11 +23,12 @@ public class WidgetControllerTest {
         final String WIDGET_JSON = """
                 {
                     "widgetClass": "google-calendar-widget",
+                    "version": "1.0.0",
                     "configuration": {
                         "title": "Lunch & Learn binnenkort",
                         "secretIcalUrl": "https://.....",
                         "lookAhead": 60,
-                        "lookBack": 0,
+                        "lookBack": 0
                     },
                     "configurationModel": [{
                         "id": "title",
@@ -50,12 +50,12 @@ public class WidgetControllerTest {
                     }],
                     "dataEndpoints": [{
                         "path": "calendar",
-                        "cache": 10*60*1000,
+                        "cache": 600000,
                         "steps": [{
                             "action": "tunnelRequest",
                             "config": {
                                 "method": "GET",
-                                "url": "%secretIcalUrl%",
+                                "url": "%secretIcalUrl%"
                             }
                         }]
                     }]
@@ -64,7 +64,8 @@ public class WidgetControllerTest {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
-                .andExpect(content().string(equalTo("{\"id\":1,\"content\":\"Hello, World!\"}")));
+                .andExpect(content()
+                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
     }
 
 }
