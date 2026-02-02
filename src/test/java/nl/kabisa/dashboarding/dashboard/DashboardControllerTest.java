@@ -8,6 +8,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import nl.kabisa.dashboarding.dashboard.orm.Dashboard;
+import nl.kabisa.dashboarding.dashboard.orm.DashboardRepository;
+
 import java.time.LocalDateTime;
 import java.util.List;
 

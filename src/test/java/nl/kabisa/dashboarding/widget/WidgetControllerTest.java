@@ -19,10 +19,59 @@ public class WidgetControllerTest {
     private MockMvc mvc;
 
     @Test
-    public void createWidget() throws Exception {
-        final String WIDGET_JSON = """
+    public void createMinimalWidgetWithoutConfiguration() throws Exception {
+        final String FULL_WIDGET_JSON = """
                 {
-                    "widgetClass": "google-calendar-widget",
+                    "widgetType": "google-calendar-widget",
+                    "version": "1.0.0",
+                    "configuration": {},
+                    "configurationModel": [],
+                    "dataEndpoints": []
+                }
+                """;
+
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(content()
+                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+    }
+
+    @Test
+    public void createMinimalWidgetWithConfiguration() throws Exception {
+        final String FULL_WIDGET_JSON = """
+                {
+                    "widgetType": "google-calendar-widget",
+                    "version": "1.0.0",
+                    "configuration": {
+                        "title": "Lunch & Learn binnenkort",
+                        "lookAhead": 60
+                    },
+                    "configurationModel": [{
+                        "id": "title",
+                        "type": "string",
+                        "scope": "frontend"
+                    }, {
+                        "id": "lookAhead",
+                        "type": "integer",
+                        "scope": "frontend"
+                    }],
+                    "dataEndpoints": []
+                }
+                """;
+
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(content()
+                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+    }
+
+    @Test
+    public void createWidget() throws Exception {
+        final String FULL_WIDGET_JSON = """
+                {
+                    "widgetType": "google-calendar-widget",
                     "version": "1.0.0",
                     "configuration": {
                         "title": "Lunch & Learn binnenkort",
@@ -62,10 +111,28 @@ public class WidgetControllerTest {
                 }
                 """;
 
-        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_JSON)
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(content()
                         .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+    }
+
+    @Test
+    public void invalidCreateWidget() throws Exception {
+        final String INVALID_WIDGET_JSON = """
+                {
+                    "widgetType": "",
+                    "version": "1.0.0",
+                    "configuration": {},
+                    "configurationModel": []
+                }
+                """;
+
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(INVALID_WIDGET_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnprocessableContent()).andExpect(content()
+                        .string(equalTo(
+                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"widgetType\":[\"Widget type cannot be blank\"]}}")));
     }
 }

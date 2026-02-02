@@ -1,4 +1,4 @@
-package nl.kabisa.dashboarding.dashboard;
+package nl.kabisa.dashboarding.dashboard.orm;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,7 +9,8 @@ import java.util.UUID;
 
 @Repository
 public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
-    @Query("select new nl.kabisa.dashboarding.dashboard.DashboardSummary(d.id, d.name, d.createdAt, d.modifiedAt) " +
+    @Query("select new nl.kabisa.dashboarding.dashboard.orm.DashboardSummary(d.id, d.name, d.createdAt, d.modifiedAt) "
+            +
             "from Dashboard d " +
             "where d.deletedAt is null " +
             "order by d.name asc")
