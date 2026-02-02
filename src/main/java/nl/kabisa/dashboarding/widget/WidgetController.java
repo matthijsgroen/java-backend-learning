@@ -12,6 +12,7 @@ public class WidgetController {
 
     @PostMapping("/widget")
     public ResponseEntity<CreateWidgetResponse> createWidget(@Valid @RequestBody CreateWidgetRequest request) {
+        
         // Implementation to create a widget
         CreateWidgetResponse response = new CreateWidgetResponse("widget-123", "Widget created successfully");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

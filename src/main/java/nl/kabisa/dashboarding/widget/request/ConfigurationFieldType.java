@@ -1,4 +1,4 @@
-package nl.kabisa.dashboarding.widget;
+package nl.kabisa.dashboarding.widget.request;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
