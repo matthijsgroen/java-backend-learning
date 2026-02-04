@@ -111,7 +111,7 @@ public class WidgetControllerTest {
                     ((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("secretIcalUrl"));
 
             assertEquals(1, ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).size());
-            assertEquals("https://.....",
+            assertEquals("https://secrets.kabisa.nl/ical/abcd1234",
                     ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).get("secretIcalUrl"));
 
         });
@@ -144,5 +144,19 @@ public class WidgetControllerTest {
                 .andExpect(jsonPath("$.configuration.lookBack").value(0))
                 .andExpect(jsonPath("$.configuration.secretIcalUrl").doesNotExist())
                 .andReturn();
+    }
+
+    @Test
+    public void getNonExistingWidgetReturnsNotFound() throws Exception {
+        mvc.perform(get("/widget/" + UUID.randomUUID().toString()).contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    public void getWidgetWithInvalidIdReturnsBadRequest() throws Exception {
+        mvc.perform(get("/widget/invalid-uuid").contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError());
     }
 }

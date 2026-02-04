@@ -2,7 +2,6 @@ package nl.kabisa.dashboarding.widget;
 
 import jakarta.validation.Valid;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,6 +30,7 @@ public class WidgetController {
     @PostMapping("/widget")
     public ResponseEntity<CreateWidgetResponse> createWidget(@Valid @RequestBody CreateWidgetRequest request) {
         ConfigurationValidator.validate(request.configuration(), request.configurationModel());
+
         Map<String, Object> frontendConfiguration = ConfigurationExtractor.extractFrontend(request.configuration(),
                 request.configurationModel());
         Map<String, Object> backendConfiguration = ConfigurationExtractor.extractBackend(request.configuration(),
@@ -53,9 +53,14 @@ public class WidgetController {
 
     @GetMapping("/widget/{id}")
     public ResponseEntity<GetWidgetResponse> getWidget(@PathVariable String id) {
-        UUID widgetId = UUID.fromString(id);
+        UUID widgetId;
+        try {
+            widgetId = UUID.fromString(id);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid widget id", ex);
+        }
         Widget widget = widgetRepository.findById(widgetId)
-                .orElseThrow(() -> new IllegalArgumentException("Widget not found"));
+                .orElseThrow(() -> new WidgetNotFoundException(widgetId));
 
         GetWidgetResponse response = new GetWidgetResponse(
                 widget.getId().toString(),

@@ -55,4 +55,20 @@ public class GlobalExceptionHandler {
                 "Validation failed",
                 ex.getErrors());
     }
+
+    @ExceptionHandler(WidgetNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> handleWidgetNotFound(WidgetNotFoundException ex) {
+        return Map.of(
+                "error", "Not Found",
+                "message", ex.getMessage());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleIllegalArgument(IllegalArgumentException ex) {
+        return Map.of(
+                "error", "Bad Request",
+                "message", ex.getMessage());
+    }
 }

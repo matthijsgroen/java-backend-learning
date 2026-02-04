@@ -1,11 +1,11 @@
 package nl.kabisa.dashboarding.widget;
 
 public final class WidgetTestFixtures {
-    
+
     private WidgetTestFixtures() {
         // Utility class - prevent instantiation
     }
-    
+
     public static final String MINIMAL_WIDGET_JSON = """
             {
                 "widgetType": "google-calendar-widget",
@@ -15,7 +15,7 @@ public final class WidgetTestFixtures {
                 "dataEndpoints": []
             }
             """;
-    
+
     public static final String WIDGET_WITH_FRONTEND_CONFIG_JSON = """
             {
                 "widgetType": "google-calendar-widget",
@@ -36,14 +36,14 @@ public final class WidgetTestFixtures {
                 "dataEndpoints": []
             }
             """;
-    
+
     public static final String FULL_WIDGET_JSON = """
             {
                 "widgetType": "google-calendar-widget",
                 "version": "1.0.0",
                 "configuration": {
                     "title": "Lunch & Learn binnenkort",
-                    "secretIcalUrl": "https://.....",
+                    "secretIcalUrl": "https://secrets.kabisa.nl/ical/abcd1234",
                     "lookAhead": 60,
                     "lookBack": 0
                 },
@@ -77,7 +77,7 @@ public final class WidgetTestFixtures {
                 }]
             }
             """;
-    
+
     public static final String INVALID_WIDGET_JSON = """
             {
                 "widgetType": "",
