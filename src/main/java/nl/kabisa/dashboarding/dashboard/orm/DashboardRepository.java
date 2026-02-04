@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface DashboardRepository extends JpaRepository<Dashboard, UUID> {
     @Query("select new nl.kabisa.dashboarding.dashboard.orm.DashboardSummary(d.id, d.name, d.createdAt, d.modifiedAt) "
             +
-            "from Dashboard d " +
+            "from nl.kabisa.dashboarding.dashboard.orm.Dashboard d " +
             "where d.deletedAt is null " +
             "order by d.name asc")
     List<DashboardSummary> findAvailableSummaries();

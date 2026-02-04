@@ -1,15 +1,21 @@
 package nl.kabisa.dashboarding.widget;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.hamcrest.Matchers.equalTo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -17,6 +23,14 @@ public class WidgetControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private WidgetRepository widgetRepository;
+
+    @BeforeEach
+    void setUp() {
+        widgetRepository.deleteAll();
+    }
 
     @Test
     public void createMinimalWidgetWithoutConfiguration() throws Exception {
@@ -33,8 +47,10 @@ public class WidgetControllerTest {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
-                .andExpect(content()
-                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("Widget created successfully"));
+
+        assertEquals(1, widgetRepository.count());
     }
 
     @Test
@@ -63,8 +79,10 @@ public class WidgetControllerTest {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
-                .andExpect(content()
-                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("Widget created successfully"));
+
+        assertEquals(1, widgetRepository.count());
     }
 
     @Test
@@ -114,8 +132,10 @@ public class WidgetControllerTest {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
-                .andExpect(content()
-                        .string(equalTo("{\"id\":\"widget-123\",\"message\":\"Widget created successfully\"}")));
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("Widget created successfully"));
+
+        assertEquals(1, widgetRepository.count());
     }
 
     @Test
