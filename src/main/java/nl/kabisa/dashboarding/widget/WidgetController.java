@@ -2,10 +2,14 @@ package nl.kabisa.dashboarding.widget;
 
 import jakarta.validation.Valid;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,4 +50,18 @@ public class WidgetController {
                 "Widget created successfully");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @GetMapping("/widget/{id}")
+    public ResponseEntity<GetWidgetResponse> getWidget(@PathVariable String id) {
+        UUID widgetId = UUID.fromString(id);
+        Widget widget = widgetRepository.findById(widgetId)
+                .orElseThrow(() -> new IllegalArgumentException("Widget not found"));
+
+        GetWidgetResponse response = new GetWidgetResponse(
+                widget.getId().toString(),
+                widget.getWidgetType(),
+                widget.getFrontendConfiguration());
+        return ResponseEntity.ok(response);
+    }
+
 }

@@ -14,10 +14,12 @@ import java.util.UUID;
 
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 
+import static nl.kabisa.dashboarding.widget.WidgetTestFixtures.*;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,18 +49,9 @@ public class WidgetControllerTest {
 
     @Test
     public void createMinimalWidgetWithoutConfiguration() throws Exception {
-        final String FULL_WIDGET_JSON = """
-                {
-                    "widgetType": "google-calendar-widget",
-                    "version": "1.0.0",
-                    "configuration": {},
-                    "configurationModel": [],
-                    "dataEndpoints": []
-                }
-                """;
-
-        MvcResult result = mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
-                .accept(MediaType.APPLICATION_JSON))
+        MvcResult result = mvc
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(MINIMAL_WIDGET_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.message").value("Widget created successfully"))
@@ -71,29 +64,10 @@ public class WidgetControllerTest {
 
     @Test
     public void createMinimalWidgetWithConfiguration() throws Exception {
-        final String FULL_WIDGET_JSON = """
-                {
-                    "widgetType": "google-calendar-widget",
-                    "version": "1.0.0",
-                    "configuration": {
-                        "title": "Lunch & Learn binnenkort",
-                        "lookAhead": 60
-                    },
-                    "configurationModel": [{
-                        "id": "title",
-                        "type": "string",
-                        "scope": "frontend"
-                    }, {
-                        "id": "lookAhead",
-                        "type": "integer",
-                        "scope": "frontend"
-                    }],
-                    "dataEndpoints": []
-                }
-                """;
-
-        MvcResult result = mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
-                .accept(MediaType.APPLICATION_JSON))
+        MvcResult result = mvc
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                        .content(WIDGET_WITH_FRONTEND_CONFIG_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.message").value("Widget created successfully"))
@@ -113,48 +87,7 @@ public class WidgetControllerTest {
     }
 
     @Test
-    public void createWidget() throws Exception {
-        final String FULL_WIDGET_JSON = """
-                {
-                    "widgetType": "google-calendar-widget",
-                    "version": "1.0.0",
-                    "configuration": {
-                        "title": "Lunch & Learn binnenkort",
-                        "secretIcalUrl": "https://.....",
-                        "lookAhead": 60,
-                        "lookBack": 0
-                    },
-                    "configurationModel": [{
-                        "id": "title",
-                        "type": "string",
-                        "scope": "frontend"
-                    }, {
-                        "id": "secretIcalUrl",
-                        "type": "string",
-                        "scope": "backend"
-                    }, {
-                        "id": "lookAhead",
-                        "type": "integer",
-                        "scope": "frontend"
-                    }, {
-                        "id": "lookBack",
-                        "type": "integer",
-                        "scope": "frontend"
-                    }],
-                    "dataEndpoints": [{
-                        "path": "calendar",
-                        "cache": 600000,
-                        "steps": [{
-                            "action": "tunnelRequest",
-                            "config": {
-                                "method": "GET",
-                                "url": "%secretIcalUrl%"
-                            }
-                        }]
-                    }]
-                }
-                """;
-
+    public void createWidgetWithSecrets() throws Exception {
         MvcResult result = mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
@@ -180,24 +113,36 @@ public class WidgetControllerTest {
             assertEquals(1, ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).size());
             assertEquals("https://.....",
                     ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).get("secretIcalUrl"));
+
         });
     }
 
     @Test
     public void invalidCreateWidget() throws Exception {
-        final String INVALID_WIDGET_JSON = """
-                {
-                    "widgetType": "",
-                    "version": "1.0.0",
-                    "configuration": {},
-                    "configurationModel": []
-                }
-                """;
-
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(INVALID_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnprocessableContent()).andExpect(content()
                         .string(equalTo(
                                 "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"widgetType\":[\"Widget type cannot be blank\"]}}")));
+    }
+
+    @Test
+    public void getWidgetWithSecrets() throws Exception {
+        MvcResult creationResult = mvc
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        UUID widgetId = extractIdFromResponse(creationResult);
+
+        mvc.perform(get("/widget/" + widgetId.toString()).contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.widgetType").value("google-calendar-widget"))
+                .andExpect(jsonPath("$.configuration.title").value("Lunch & Learn binnenkort"))
+                .andExpect(jsonPath("$.configuration.lookAhead").value(60))
+                .andExpect(jsonPath("$.configuration.lookBack").value(0))
+                .andExpect(jsonPath("$.configuration.secretIcalUrl").doesNotExist())
+                .andReturn();
     }
 }
