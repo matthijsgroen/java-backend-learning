@@ -1,30 +1,11 @@
 package nl.kabisa.dashboarding.widget.dto;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum ConfigurationFieldStorage {
-    PLAIN("plain"),
-    ENCRYPTED("encrypted");
+    @JsonProperty("plain")
+    PLAIN,
 
-    private final String value;
-
-    ConfigurationFieldStorage(String value) {
-        this.value = value;
-    }
-
-    @JsonValue
-    public String getValue() {
-        return value;
-    }
-
-    @JsonCreator
-    public static ConfigurationFieldStorage fromValue(String value) {
-        for (ConfigurationFieldStorage type : values()) {
-            if (type.value.equals(value)) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Invalid type: " + value);
-    }
+    @JsonProperty("encrypted")
+    ENCRYPTED
 }

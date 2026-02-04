@@ -59,7 +59,7 @@ public final class ConfigurationValidator {
             }
 
             if (!matchesType(value, type)) {
-                addError(errors, item.id(), "Configuration value does not match type " + type.getValue());
+                addError(errors, item.id(), "Configuration value does not match type " + type);
                 continue;
             }
 

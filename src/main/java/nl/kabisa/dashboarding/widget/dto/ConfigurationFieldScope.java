@@ -1,30 +1,11 @@
 package nl.kabisa.dashboarding.widget.dto;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum ConfigurationFieldScope {
-    BACKEND("backend"),
-    FRONTEND("frontend");
+    @JsonProperty("backend")
+    BACKEND,
 
-    private final String value;
-
-    ConfigurationFieldScope(String value) {
-        this.value = value;
-    }
-
-    @JsonValue
-    public String getValue() {
-        return value;
-    }
-
-    @JsonCreator
-    public static ConfigurationFieldScope fromValue(String value) {
-        for (ConfigurationFieldScope type : values()) {
-            if (type.value.equals(value)) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Invalid type: " + value);
-    }
+    @JsonProperty("frontend")
+    FRONTEND
 }
