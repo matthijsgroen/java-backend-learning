@@ -121,9 +121,10 @@ public class WidgetControllerTest {
     public void invalidCreateWidget() throws Exception {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(INVALID_WIDGET_JSON)
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnprocessableContent()).andExpect(content()
-                        .string(equalTo(
-                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"widgetType\":[\"Widget type cannot be blank\"]}}")));
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.status").value(422))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.widgetType[0]").value("Widget type cannot be blank"));
     }
 
     @Test
@@ -164,18 +165,20 @@ public class WidgetControllerTest {
     public void createWidgetWithConfigDataTypeError() throws Exception {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_WRONG_CONFIG_DATA_TYPE)
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnprocessableContent()).andExpect(content()
-                        .string(equalTo(
-                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"lookAhead\":[\"Configuration value does not match type INTEGER\"]}}")));
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.status").value(422))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.lookAhead[0]").value("Configuration value does not match type INTEGER"));
     }
 
     @Test
     public void createWidgetWithMissingRequiredConfig() throws Exception {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_MISSING_FIELD_IN_CONFIG)
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnprocessableContent()).andExpect(content()
-                        .string(equalTo(
-                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"lookAhead\":[\"Missing configuration value\"]}}")));
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.status").value(422))
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.lookAhead[0]").value("Missing configuration value"));
     }
 
     @Test
