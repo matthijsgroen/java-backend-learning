@@ -86,4 +86,66 @@ public final class WidgetTestFixtures {
                 "configurationModel": []
             }
             """;
+
+    public static final String WIDGET_WITH_MISSING_FIELD_IN_CONFIG = """
+            {
+                "widgetType": "google-calendar-widget",
+                "version": "1.0.0",
+                "configuration": {
+                    "title": "Lunch & Learn binnenkort"
+                },
+                "configurationModel": [{
+                    "id": "title",
+                    "type": "string",
+                    "scope": "frontend"
+                }, {
+                    "id": "lookAhead",
+                    "type": "integer",
+                    "scope": "frontend"
+                }],
+                "dataEndpoints": []
+            }
+            """;
+
+    public static final String WIDGET_WITH_WRONG_CONFIG_SCOPE = """
+            {
+                "widgetType": "google-calendar-widget",
+                "version": "1.0.0",
+                "configuration": {
+                    "title": "Lunch & Learn binnenkort",
+                    "lookAhead": "sixty"
+                },
+                "configurationModel": [{
+                    "id": "title",
+                    "type": "string",
+                    "scope": "blockchain"
+                }, {
+                    "id": "lookAhead",
+                    "type": "string",
+                    "scope": "cyberspace"
+                }],
+                "dataEndpoints": []
+            }
+            """;
+
+    public static final String WIDGET_WITH_WRONG_CONFIG_DATA_TYPE = """
+            {
+                "widgetType": "google-calendar-widget",
+                "version": "1.0.0",
+                "configuration": {
+                    "title": "Lunch & Learn binnenkort",
+                    "lookAhead": "sixty"
+                },
+                "configurationModel": [{
+                    "id": "title",
+                    "type": "string",
+                    "scope": "frontend"
+                }, {
+                    "id": "lookAhead",
+                    "type": "integer",
+                    "scope": "frontend"
+                }],
+                "dataEndpoints": []
+            }
+            """;
 }

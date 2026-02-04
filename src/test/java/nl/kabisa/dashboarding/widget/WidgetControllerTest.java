@@ -159,4 +159,32 @@ public class WidgetControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().is4xxClientError());
     }
+
+    @Test
+    public void createWidgetWithConfigDataTypeError() throws Exception {
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_WRONG_CONFIG_DATA_TYPE)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnprocessableContent()).andExpect(content()
+                        .string(equalTo(
+                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"lookAhead\":[\"Configuration value does not match type INTEGER\"]}}")));
+    }
+
+    @Test
+    public void createWidgetWithMissingRequiredConfig() throws Exception {
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_MISSING_FIELD_IN_CONFIG)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnprocessableContent()).andExpect(content()
+                        .string(equalTo(
+                                "{\"status\":422,\"message\":\"Validation failed\",\"errors\":{\"lookAhead\":[\"Missing configuration value\"]}}")));
+    }
+
+    @Test
+    public void createWidgetWithWrongConfigScope() throws Exception {
+        mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_WRONG_CONFIG_SCOPE)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError()).andExpect(content()
+                        .string(equalTo(
+                                "{\"message\":\"JSON parse error: Cannot deserialize value of type `nl.kabisa.dashboarding.widget.dto.ConfigurationFieldScope` from String \\\"blockchain\\\": not one of the values accepted for Enum class: [frontend, backend]\",\"error\":\"JSON parsing failed\"}")));
+    }
+
 }
