@@ -7,6 +7,5 @@ import jakarta.validation.constraints.NotBlank;
 public record ConfigurationModelItem(
                 @NotBlank(message = "Configuration model item ID cannot be blank") @Schema(description = "Unique identifier for the widget type", example = "title") String id,
                 @Schema(description = "Type of the configuration field", example = "string") ConfigurationFieldType type,
-                @Schema(description = "Scope of the configuration field", example = "string") ConfigurationFieldScope scope,
-                @Schema(description = "Type of storage for the field. Default is plain", example = "encrypted") ConfigurationFieldStorage storage) {
+                @Schema(description = "Scope of the configuration field", example = "string") ConfigurationFieldScope scope) {
 }

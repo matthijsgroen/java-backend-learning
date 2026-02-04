@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import nl.kabisa.dashboarding.widget.configuration.ConfigurationValidationException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,5 +45,14 @@ public class GlobalExceptionHandler {
         return Map.of(
                 "error", "JSON parsing failed",
                 "message", ex.getMessage());
+    }
+
+    @ExceptionHandler(ConfigurationValidationException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
+    public ValidationErrorResponse handleConfigurationValidation(ConfigurationValidationException ex) {
+        return new ValidationErrorResponse(
+                HttpStatus.UNPROCESSABLE_CONTENT.value(),
+                "Validation failed",
+                ex.getErrors());
     }
 }

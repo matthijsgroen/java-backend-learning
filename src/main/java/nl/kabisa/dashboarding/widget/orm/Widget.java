@@ -1,7 +1,6 @@
 package nl.kabisa.dashboarding.widget.orm;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,6 +8,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.*;
+import nl.kabisa.dashboarding.widget.EncryptionUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Entity
 @Table(name = "widgets")
@@ -29,7 +30,13 @@ public class Widget {
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> configuration;
+    private Map<String, Object> frontendConfiguration;
+
+    @Column
+    private String secretsConfiguration;
+
+    @Transient
+    private Map<String, Object> decryptedSecretsConfiguration;
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
@@ -45,11 +52,42 @@ public class Widget {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        encryptSecretsConfiguration();
     }
 
     @PreUpdate
     protected void onUpdate() {
         modifiedAt = LocalDateTime.now();
+        encryptSecretsConfiguration();
+    }
+
+    @PostLoad
+    protected void onLoad() {
+        decryptSecretsConfiguration();
+    }
+
+    private void encryptSecretsConfiguration() {
+        if (decryptedSecretsConfiguration != null && widgetType != null) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonString = mapper.writeValueAsString(decryptedSecretsConfiguration);
+                secretsConfiguration = EncryptionUtil.encrypt(jsonString, widgetType);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to encrypt secrets configuration", e);
+            }
+        }
+    }
+
+    private void decryptSecretsConfiguration() {
+        if (secretsConfiguration != null && widgetType != null && !secretsConfiguration.isEmpty()) {
+            try {
+                String decryptedJson = EncryptionUtil.decrypt(secretsConfiguration, widgetType);
+                ObjectMapper mapper = new ObjectMapper();
+                decryptedSecretsConfiguration = mapper.readValue(decryptedJson, Map.class);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to decrypt secrets configuration", e);
+            }
+        }
     }
 
     public UUID getId() {
@@ -84,12 +122,20 @@ public class Widget {
         this.modifiedAt = modifiedAt;
     }
 
-    public Map<String, Object> getConfiguration() {
-        return configuration;
+    public Map<String, Object> getFrontendConfiguration() {
+        return frontendConfiguration;
     }
 
-    public void setConfiguration(Map<String, Object> configuration) {
-        this.configuration = configuration;
+    public void setFrontendConfiguration(Map<String, Object> frontendConfiguration) {
+        this.frontendConfiguration = frontendConfiguration;
+    }
+
+    public Map<String, Object> getSecretsConfiguration() {
+        return decryptedSecretsConfiguration;
+    }
+
+    public void setSecretsConfiguration(Map<String, Object> secretsConfiguration) {
+        this.decryptedSecretsConfiguration = secretsConfiguration;
     }
 
     public Object getConfigurationModel() {
