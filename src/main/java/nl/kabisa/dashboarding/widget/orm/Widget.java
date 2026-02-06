@@ -37,7 +37,7 @@ public class Widget {
     @Column
     private LocalDateTime modifiedAt;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "jsonb", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> frontendConfiguration;
 

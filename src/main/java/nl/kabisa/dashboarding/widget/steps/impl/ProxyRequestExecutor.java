@@ -38,8 +38,8 @@ public class ProxyRequestExecutor implements StepExecutor {
             throw new IllegalArgumentException("proxyRequest step requires 'url' in config");
         }
 
-        // Replace placeholders with values from secrets configuration
-        String resolvedUrl = resolvePlaceholders(urlTemplate, context.widget().getSecretsConfiguration());
+        // Resolve placeholders from both frontend and secrets configuration
+        String resolvedUrl = context.resolvePlaceholders(urlTemplate);
 
         try {
             byte[] responseBody = restClient
@@ -55,18 +55,5 @@ public class ProxyRequestExecutor implements StepExecutor {
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute proxy request to " + resolvedUrl, e);
         }
-    }
-
-    private String resolvePlaceholders(String template, Map<String, Object> secrets) {
-        if (secrets == null) {
-            return template;
-        }
-
-        String result = template;
-        for (Map.Entry<String, Object> entry : secrets.entrySet()) {
-            String placeholder = "%" + entry.getKey() + "%";
-            result = result.replace(placeholder, entry.getValue().toString());
-        }
-        return result;
     }
 }

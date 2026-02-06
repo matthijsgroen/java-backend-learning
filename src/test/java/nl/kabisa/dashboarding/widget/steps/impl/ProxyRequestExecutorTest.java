@@ -97,6 +97,73 @@ class ProxyRequestExecutorTest {
     }
 
     @Test
+    void testProxyRequestWithFrontendConfigurationPlaceholder() {
+        // Arrange
+        wireMockServer.stubFor(
+                get(urlEqualTo("/events"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"events\": []}")));
+
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "http://localhost:8089%path%");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        Map<String, Object> frontend = new HashMap<>();
+        frontend.put("path", "/events");
+        widget.setFrontendConfiguration(frontend);
+
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act
+        StepExecutionResult result = executor.execute(step, context);
+
+        // Assert
+        assertThat(result.status()).isEqualTo(HttpStatus.OK);
+        assertThat(result.body()).isEqualTo("{\"events\": []}".getBytes());
+        wireMockServer.verify(getRequestedFor(urlEqualTo("/events")));
+    }
+
+    @Test
+    void testProxyRequestSecretConfigurationOverridesFrontend() {
+        // Arrange - Secrets config should override frontend config for same key
+        wireMockServer.stubFor(
+                get(urlEqualTo("/secret/path"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"data\": \"secret\"}")));
+
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "http://localhost:8089%apiPath%");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+
+        Map<String, Object> frontend = new HashMap<>();
+        frontend.put("apiPath", "/public/path");
+        widget.setFrontendConfiguration(frontend);
+
+        Map<String, Object> secrets = new HashMap<>();
+        secrets.put("apiPath", "/secret/path");
+        widget.setSecretsConfiguration(secrets);
+
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act
+        StepExecutionResult result = executor.execute(step, context);
+
+        // Assert - Should use secret value, not frontend value
+        assertThat(result.status()).isEqualTo(HttpStatus.OK);
+        assertThat(result.body()).isEqualTo("{\"data\": \"secret\"}".getBytes());
+        wireMockServer.verify(getRequestedFor(urlEqualTo("/secret/path")));
+    }
+
+    @Test
     void testProxyRequestMissingUrl() {
         // Arrange
         Map<String, Object> config = new HashMap<>();
