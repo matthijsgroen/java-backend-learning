@@ -1,4 +1,4 @@
-package nl.kabisa.dashboarding.dashboard;
+package nl.kabisa.dashboarding.dashboard.orm;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

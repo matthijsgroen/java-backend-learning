@@ -1,4 +1,4 @@
-package nl.kabisa.dashboarding.dashboard;
+package nl.kabisa.dashboarding.dashboard.orm;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
