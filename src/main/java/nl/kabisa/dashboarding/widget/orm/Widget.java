@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Entity
 @Table(name = "widgets")
 public class Widget {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -72,8 +73,7 @@ public class Widget {
     private void encryptSecretsConfiguration() {
         if (decryptedSecretsConfiguration != null && widgetType != null) {
             try {
-                ObjectMapper mapper = new ObjectMapper();
-                String jsonString = mapper.writeValueAsString(decryptedSecretsConfiguration);
+                String jsonString = OBJECT_MAPPER.writeValueAsString(decryptedSecretsConfiguration);
                 secretsConfiguration = EncryptionUtil.encrypt(jsonString, widgetType);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to encrypt secrets configuration", e);
@@ -85,8 +85,7 @@ public class Widget {
         if (secretsConfiguration != null && widgetType != null && !secretsConfiguration.isEmpty()) {
             try {
                 String decryptedJson = EncryptionUtil.decrypt(secretsConfiguration, widgetType);
-                ObjectMapper mapper = new ObjectMapper();
-                decryptedSecretsConfiguration = mapper.readValue(decryptedJson, Map.class);
+                decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson, Map.class);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to decrypt secrets configuration", e);
             }
