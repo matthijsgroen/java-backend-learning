@@ -22,6 +22,9 @@ public class Widget {
     @Column(nullable = false)
     private String widgetType;
 
+    @Column(nullable = false)
+    private String version;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -104,6 +107,14 @@ public class Widget {
 
     public void setWidgetType(String widgetType) {
         this.widgetType = widgetType;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
     public LocalDateTime getCreatedAt() {

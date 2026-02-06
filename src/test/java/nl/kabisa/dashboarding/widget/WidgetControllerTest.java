@@ -139,6 +139,7 @@ public class WidgetControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.widgetType").value("google-calendar-widget"))
+                .andExpect(jsonPath("$.version").value("1.0.0"))
                 .andExpect(jsonPath("$.configuration.title").value("Lunch & Learn binnenkort"))
                 .andExpect(jsonPath("$.configuration.lookAhead").value(60))
                 .andExpect(jsonPath("$.configuration.lookBack").value(0))

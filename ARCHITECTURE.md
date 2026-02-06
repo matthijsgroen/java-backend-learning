@@ -40,7 +40,7 @@ Example:
 
 ```
 {
-    widgetClass: "google-calendar-widget",
+    widgetType: "google-calendar-widget",
     configuration: {
         title: "Lunch & Learn binnenkort",
         secretIcalUrl: "https://.....",

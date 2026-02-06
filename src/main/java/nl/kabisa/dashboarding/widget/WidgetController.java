@@ -38,6 +38,7 @@ public class WidgetController {
 
         Widget widget = new Widget();
         widget.setWidgetType(request.widgetType());
+        widget.setVersion(request.version());
 
         widget.setFrontendConfiguration(frontendConfiguration);
         widget.setSecretsConfiguration(backendConfiguration);
@@ -65,6 +66,7 @@ public class WidgetController {
         GetWidgetResponse response = new GetWidgetResponse(
                 widget.getId().toString(),
                 widget.getWidgetType(),
+                widget.getVersion(),
                 widget.getFrontendConfiguration());
         return ResponseEntity.ok(response);
     }
