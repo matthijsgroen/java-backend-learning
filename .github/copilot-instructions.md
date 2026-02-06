@@ -10,6 +10,7 @@ This is a Spring Boot 4.0.2 dashboarding application using **Java 25** with Post
 - Current modules:
   - `restservice`: REST API endpoints (example: greeting service)
   - `dashboard`: JPA entity management for dashboards with PostgreSQL/JSONB
+  - `widget`: Widget management with encrypted secrets and configuration validation
 - **Spring Modulith enforces module boundaries** - modules communicate via well-defined interfaces, not direct package access
 
 ### Key Technologies
@@ -26,7 +27,7 @@ This is a Spring Boot 4.0.2 dashboarding application using **Java 25** with Post
 ```bash
 docker compose up # Starts PostgreSQL container
 ```
-Database credentials in [application.properties](src/main/resources/application.properties): `learninguser/learningpass` on `localhost:5432/learningdb`
+Database credentials in [application.properties](src/main/resources/application.properties): `dashboarduser/dashboardpass` on `localhost:5432/dashboarddb`
 
 ### Running the Application
 ```bash
@@ -60,6 +61,12 @@ Or use VS Code's "Run: DashboardingApplication" terminal configuration.
 - UUID primary keys with `@GeneratedValue(strategy = GenerationType.UUID)`
 - Soft deletes via `deletedAt` timestamps
 - Example: [Dashboard.java](src/main/java/nl/kabisa/dashboarding/dashboard/Dashboard.java)
+
+### Widget Security & Serialization
+- Widget secrets are encrypted/decrypted in entity lifecycle callbacks
+- Use `EncryptionUtil` with PBKDF2-derived AES keys
+- Reuse a shared `ObjectMapper` (static or injected); do not instantiate per call
+- Catch specific exceptions (e.g., `JsonProcessingException`, `GeneralSecurityException`) with descriptive messages
 
 ### Repositories
 - Extend `JpaRepository<Entity, ID>` interface
