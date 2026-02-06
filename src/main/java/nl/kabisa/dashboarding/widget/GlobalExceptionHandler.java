@@ -24,13 +24,13 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             String fieldName = error.getField();
             String errorMessage = error.getDefaultMessage();
-            errors.computeIfAbsent(fieldName, k -> List.of(errorMessage));
+            errors.computeIfAbsent(fieldName, k -> new java.util.ArrayList<>()).add(errorMessage);
         });
 
         ex.getBindingResult().getGlobalErrors().forEach(error -> {
             String objectName = error.getObjectName();
             String errorMessage = error.getDefaultMessage();
-            errors.computeIfAbsent(objectName, k -> List.of(errorMessage));
+            errors.computeIfAbsent(objectName, k -> new java.util.ArrayList<>()).add(errorMessage);
         });
 
         return new ValidationErrorResponse(
