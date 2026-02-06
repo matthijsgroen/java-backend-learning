@@ -18,6 +18,7 @@ import static nl.kabisa.dashboarding.widget.WidgetTestFixtures.*;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,8 +107,7 @@ public class WidgetControllerTest {
                     ((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("lookAhead"));
             assertEquals(0,
                     ((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("lookBack"));
-            assertEquals(null,
-                    ((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("secretIcalUrl"));
+            assertNull(((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("secretIcalUrl"));
 
             assertEquals(1, ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).size());
             assertEquals("https://secrets.kabisa.nl/ical/abcd1234",

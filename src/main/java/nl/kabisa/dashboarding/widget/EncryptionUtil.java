@@ -4,6 +4,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.GeneralSecurityException;
 import java.util.Base64;
 
 public class EncryptionUtil {
@@ -20,8 +21,9 @@ public class EncryptionUtil {
      * @param plaintext the text to encrypt
      * @param keyString the key string (will be hashed using PBKDF2)
      * @return Base64 encoded encrypted string
+     * @throws GeneralSecurityException if encryption fails
      */
-    public static String encrypt(String plaintext, String keyString) throws Exception {
+    public static String encrypt(String plaintext, String keyString) throws GeneralSecurityException {
         if (plaintext == null || plaintext.isEmpty()) {
             return null;
         }
@@ -43,8 +45,9 @@ public class EncryptionUtil {
      * @param encryptedText the Base64 encoded encrypted text
      * @param keyString     the key string (must match the one used for encryption)
      * @return decrypted plaintext string
+     * @throws GeneralSecurityException if decryption fails
      */
-    public static String decrypt(String encryptedText, String keyString) throws Exception {
+    public static String decrypt(String encryptedText, String keyString) throws GeneralSecurityException {
         if (encryptedText == null || encryptedText.isEmpty()) {
             return null;
         }
@@ -63,8 +66,10 @@ public class EncryptionUtil {
     /**
      * Derives a fixed-size key from the provided key string using PBKDF2.
      * Uses a fixed salt and iteration count for deterministic key derivation.
+     * 
+     * @throws GeneralSecurityException if key derivation fails
      */
-    private static byte[] deriveKey(String keyString) throws Exception {
+    private static byte[] deriveKey(String keyString) throws GeneralSecurityException {
         PBEKeySpec spec = new PBEKeySpec(
                 keyString.toCharArray(),
                 SALT.getBytes(),

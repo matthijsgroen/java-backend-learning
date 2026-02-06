@@ -10,6 +10,8 @@ import org.hibernate.type.SqlTypes;
 import jakarta.persistence.*;
 import nl.kabisa.dashboarding.widget.EncryptionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import java.security.GeneralSecurityException;
 
 @Entity
 @Table(name = "widgets")
@@ -75,8 +77,11 @@ public class Widget {
             try {
                 String jsonString = OBJECT_MAPPER.writeValueAsString(decryptedSecretsConfiguration);
                 secretsConfiguration = EncryptionUtil.encrypt(jsonString, widgetType);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to encrypt secrets configuration", e);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(
+                        "Failed to serialize secrets configuration to JSON before encryption: " + e.getMessage(), e);
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException("Encryption of secrets configuration failed: " + e.getMessage(), e);
             }
         }
     }
@@ -86,8 +91,11 @@ public class Widget {
             try {
                 String decryptedJson = EncryptionUtil.decrypt(secretsConfiguration, widgetType);
                 decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson, Map.class);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to decrypt secrets configuration", e);
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException("Decryption of secrets configuration failed: " + e.getMessage(), e);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(
+                        "Failed to deserialize decrypted secrets configuration from JSON: " + e.getMessage(), e);
             }
         }
     }
