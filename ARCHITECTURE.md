@@ -56,7 +56,6 @@ Example:
         id: "secretIcalUrl",
         type: "string",
         scope: "backend",
-        storage: "encrypted"
     }, {
         id: "lookAhead",
         type: "integer",
