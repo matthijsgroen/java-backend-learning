@@ -115,7 +115,7 @@ public class WidgetControllerTest {
                         assertNull(((java.util.Map<String, ?>) widget.getFrontendConfiguration()).get("secretIcalUrl"));
 
                         assertEquals(1, ((java.util.Map<String, ?>) widget.getSecretsConfiguration()).size());
-                        assertEquals("https://localhost:8089/ical/abcd1234",
+                        assertEquals("http://localhost:8089/ical/abcd1234",
                                         ((java.util.Map<String, ?>) widget.getSecretsConfiguration())
                                                         .get("secretIcalUrl"));
 

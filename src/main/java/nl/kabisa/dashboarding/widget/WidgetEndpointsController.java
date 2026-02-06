@@ -1,7 +1,6 @@
 package nl.kabisa.dashboarding.widget;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,14 +12,18 @@ import org.springframework.web.bind.annotation.RestController;
 import nl.kabisa.dashboarding.widget.dto.DataEndpointModelItem;
 import nl.kabisa.dashboarding.widget.orm.Widget;
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
+import nl.kabisa.dashboarding.widget.steps.StepExecutionResult;
+import nl.kabisa.dashboarding.widget.steps.StepExecutorService;
 
 @RestController
 public class WidgetEndpointsController {
 
     private final WidgetRepository widgetRepository;
+    private final StepExecutorService stepExecutorService;
 
-    public WidgetEndpointsController(WidgetRepository widgetRepository) {
+    public WidgetEndpointsController(WidgetRepository widgetRepository, StepExecutorService stepExecutorService) {
         this.widgetRepository = widgetRepository;
+        this.stepExecutorService = stepExecutorService;
     }
 
     @GetMapping("/widget/{id}/endpoint/{endpointName}")
@@ -46,12 +49,16 @@ public class WidgetEndpointsController {
         }
 
         DataEndpointModelItem endpoint = matchingEndpoint.get();
-        // For demonstration, we just return the endpoint configuration. In a real
-        // implementation, you would execute the logic associated with this endpoint.
-        return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "widgetId", widgetId.toString(),
-                "endpoint", endpoint));
+
+        StepExecutionResult result = stepExecutorService.executeSteps(endpoint.steps(), widget);
+        ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.status(result.status());
+        if (result.contentType() != null) {
+            responseBuilder.contentType(result.contentType());
+        }
+        if (result.body() == null) {
+            return responseBuilder.build();
+        }
+        return responseBuilder.body(result.body());
     }
 
 }

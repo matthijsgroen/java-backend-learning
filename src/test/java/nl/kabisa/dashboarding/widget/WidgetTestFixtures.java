@@ -43,7 +43,7 @@ public final class WidgetTestFixtures {
                 "version": "1.0.0",
                 "configuration": {
                     "title": "Lunch & Learn binnenkort",
-                    "secretIcalUrl": "https://localhost:8089/ical/abcd1234",
+                    "secretIcalUrl": "http://localhost:8089/ical/abcd1234",
                     "lookAhead": 60,
                     "lookBack": 0
                 },
@@ -68,7 +68,7 @@ public final class WidgetTestFixtures {
                     "path": "calendar",
                     "cache": 600000,
                     "steps": [{
-                        "action": "tunnelRequest",
+                        "action": "proxyRequest",
                         "config": {
                             "method": "GET",
                             "url": "%secretIcalUrl%"

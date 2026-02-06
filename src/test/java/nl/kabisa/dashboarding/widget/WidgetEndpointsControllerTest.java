@@ -19,13 +19,19 @@ import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 
 import org.springframework.http.MediaType;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static org.hamcrest.Matchers.equalTo;
 import static nl.kabisa.dashboarding.widget.WidgetTestFixtures.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+
+import com.github.tomakehurst.wiremock.client.WireMock;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,7 +78,7 @@ public class WidgetEndpointsControllerTest {
         UUID widgetId = extractIdFromResponse(creationResult);
 
         mvc.perform(
-                get("/widget/" + widgetId.toString() + "/endpoint/does-not-exist")
+                MockMvcRequestBuilders.get("/widget/" + widgetId.toString() + "/endpoint/does-not-exist")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
@@ -80,32 +86,37 @@ public class WidgetEndpointsControllerTest {
 
     @Test
     public void useCustomWidgetEndpoint() throws Exception {
-        // Stub external API response
-        stubFor(get(urlPathEqualTo("/api/calendar/events"))
+        String mockCalenderResult = """
+                {
+                    "events": [
+                        {
+                            "id": 1,
+                            "title": "Meeting"
+                        }
+                    ]
+                }
+                """;
+        // Stub external API response for the calendar endpoint
+        stubFor(WireMock.get(urlPathEqualTo("/ical/abcd1234"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody("{\"events\": [{\"id\": 1, \"title\": \"Meeting\"}]}")));
+                        .withBody(mockCalenderResult)));
 
         MvcResult creationResult = mvc
-                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON))
                 .andReturn();
 
         UUID widgetId = extractIdFromResponse(creationResult);
 
         mvc.perform(
-                get("/widget/" + widgetId.toString() + "/endpoint/calendar").contentType(MediaType.APPLICATION_JSON)
+                MockMvcRequestBuilders.get("/widget/" + widgetId.toString() + "/endpoint/calendar")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(content().toEqual("{}"))
-                // .andExpect(jsonPath("$.widgetId").value("Validation failed"))
-                .andExpect(jsonPath("$.endpoint").value("Missing configuration value"));
+                .andExpect(header().string("Content-Type", equalTo("application/json")))
+                .andExpect(content().string(equalTo(mockCalenderResult)));
 
-        // // Verify the backend called the external API
-        // verify(getRequestedFor(urlPathEqualTo("/api/calendar/events"))
-        // .withHeader("Accept", equalTo("application/json")));
     }
 
 }
