@@ -10,17 +10,28 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 
+import nl.kabisa.dashboarding.widget.configuration.ProxyConfiguration;
 import nl.kabisa.dashboarding.widget.dto.EndpointProcessingStep;
 import nl.kabisa.dashboarding.widget.orm.Widget;
 import nl.kabisa.dashboarding.widget.steps.StepExecutionContext;
 import nl.kabisa.dashboarding.widget.steps.StepExecutionResult;
+import org.springframework.test.context.TestPropertySource;
 
+@SpringBootTest
+@TestPropertySource(properties = {
+        "dashboarding.proxy.allowed-schemes=http,https",
+        "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
+})
 class ProxyRequestExecutorTest {
+    @Autowired
+    private ProxyConfiguration proxyConfiguration;
 
     private WireMockServer wireMockServer;
     private ProxyRequestExecutor executor;
@@ -31,7 +42,7 @@ class ProxyRequestExecutorTest {
         wireMockServer = new WireMockServer();
         wireMockServer.start();
         baseUrl = "http://localhost:" + wireMockServer.port();
-        executor = new ProxyRequestExecutor();
+        executor = new ProxyRequestExecutor(proxyConfiguration);
     }
 
     @AfterEach
@@ -188,5 +199,107 @@ class ProxyRequestExecutorTest {
     @Test
     void testActionName() {
         assertThat(executor.action()).isEqualTo("proxyRequest");
+    }
+
+    @Test
+    void testBlocksDisallowedScheme() {
+        // Arrange - only http/https are allowed in test config
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "ftp://api.example.com/file.txt");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Scheme not allowed");
+    }
+
+    @Test
+    void testBlocksPrivateIPLoopback() {
+        // Arrange - localhost/127.0.0.1 should be blocked
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "https://127.0.0.1/admin");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Private/internal IP address not allowed");
+    }
+
+    @Test
+    void testBlocksPrivateIPRange10() {
+        // Arrange - 10.x.x.x range should be blocked
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "https://10.0.0.1/internal");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Private/internal IP address not allowed");
+    }
+
+    @Test
+    void testBlocksPrivateIPRange192168() {
+        // Arrange - 192.168.x.x range should be blocked
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "https://192.168.1.100/network");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Private/internal IP address not allowed");
+    }
+
+    @Test
+    void testBlocksPrivateIPRange172() {
+        // Arrange - 172.16.x.x to 172.31.x.x range should be blocked
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "https://172.16.0.1/docker");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Private/internal IP address not allowed");
+    }
+
+    @Test
+    void testBlocksUnallowedHost() {
+        // Arrange - host not in allowlist should be blocked
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", "https://evilcorp.com/api");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act & Assert
+        assertThatThrownBy(() -> executor.execute(step, context))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Host not in allowlist");
     }
 }

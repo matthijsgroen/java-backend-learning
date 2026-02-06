@@ -1,13 +1,17 @@
 package nl.kabisa.dashboarding.widget.steps.impl;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import nl.kabisa.dashboarding.widget.configuration.ProxyConfiguration;
 import nl.kabisa.dashboarding.widget.dto.EndpointProcessingStep;
 import nl.kabisa.dashboarding.widget.steps.StepExecutionContext;
 import nl.kabisa.dashboarding.widget.steps.StepExecutionResult;
@@ -17,14 +21,48 @@ import nl.kabisa.dashboarding.widget.steps.StepExecutor;
 public class ProxyRequestExecutor implements StepExecutor {
 
     private final RestClient restClient;
+    private final Set<String> allowedSchemes;
+    private final Set<String> allowedHosts;
+    private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
+            "^(127\\.|10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.|::1|fc[0-9a-f]{2}:).*");
 
-    public ProxyRequestExecutor() {
+    public ProxyRequestExecutor(ProxyConfiguration proxyConfiguration) {
         this.restClient = RestClient.create();
+        this.allowedSchemes = new HashSet<>(proxyConfiguration.getAllowedSchemes());
+        this.allowedHosts = new HashSet<>(proxyConfiguration.getAllowedHosts());
     }
 
     @Override
     public String action() {
         return "proxyRequest";
+    }
+
+    private void validateUrl(String urlString) throws IllegalArgumentException {
+        try {
+            URI uri = new URI(urlString);
+
+            // Validate scheme
+            if (!allowedSchemes.contains(uri.getScheme())) {
+                throw new IllegalArgumentException("Scheme not allowed: " + uri.getScheme());
+            }
+
+            String host = uri.getHost();
+            if (host == null || host.isEmpty()) {
+                throw new IllegalArgumentException("Missing host in URL");
+            }
+
+            // Reject IP literals and private ranges
+            if (PRIVATE_IP_PATTERN.matcher(host).find()) {
+                throw new IllegalArgumentException("Private/internal IP address not allowed");
+            }
+
+            // Validate against allowlist
+            if (!allowedHosts.contains(host)) {
+                throw new IllegalArgumentException("Host not in allowlist: " + host);
+            }
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid URL format", e);
+        }
     }
 
     @Override
@@ -40,6 +78,7 @@ public class ProxyRequestExecutor implements StepExecutor {
 
         // Resolve placeholders from both frontend and secrets configuration
         String resolvedUrl = context.resolvePlaceholders(urlTemplate);
+        validateUrl(resolvedUrl);
 
         try {
             ResponseEntity<byte[]> response = restClient

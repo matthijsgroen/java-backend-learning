@@ -31,9 +31,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "dashboarding.proxy.allowed-schemes=http,https",
+        "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
+})
 public class WidgetEndpointsControllerTest {
 
     @Autowired
