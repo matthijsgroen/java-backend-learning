@@ -61,14 +61,14 @@ Example:
         type: "integer",
         scope: "frontend"
     }, {
-        id: "lookAhead",
+        id: "lookBack",
         type: "integer",
-        scope: "backend"
+        scope: "frontend"
     }],
     // Definition of custom endpoints on backend for widget
     dataEndpoints: [{
         path: "calendar",
-        cache: 10*60*1000,
+        cache: 600000,
         steps: [{
             action: "tunnelRequest",
             config: {
