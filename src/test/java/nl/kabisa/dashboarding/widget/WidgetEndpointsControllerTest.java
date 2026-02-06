@@ -24,7 +24,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.Matchers.equalTo;
-import static nl.kabisa.dashboarding.widget.WidgetTestFixtures.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -44,15 +43,17 @@ public class WidgetEndpointsControllerTest {
     private WidgetRepository widgetRepository;
 
     private WireMockServer wireMockServer;
+    private String baseUrl;
 
     @BeforeEach
     void setUp() {
         widgetRepository.deleteAll();
 
-        // Start WireMock server on port 8089
-        wireMockServer = new WireMockServer(8089);
+        // Start WireMock server on dynamic port
+        wireMockServer = new WireMockServer();
         wireMockServer.start();
-        configureFor("localhost", 8089);
+        baseUrl = "http://localhost:" + wireMockServer.port();
+        configureFor("localhost", wireMockServer.port());
     }
 
     @AfterEach
@@ -71,7 +72,8 @@ public class WidgetEndpointsControllerTest {
     @Test
     public void widgetEndpointNotFound() throws Exception {
         MvcResult creationResult = mvc
-                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON)
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                        .content(WidgetTestFixtures.fullWidgetJson(baseUrl))
                         .accept(MediaType.APPLICATION_JSON))
                 .andReturn();
 
@@ -86,7 +88,7 @@ public class WidgetEndpointsControllerTest {
 
     @Test
     public void useCustomWidgetEndpoint() throws Exception {
-        String mockCalenderResult = """
+        String mockCalendarResult = """
                 {
                     "events": [
                         {
@@ -101,10 +103,11 @@ public class WidgetEndpointsControllerTest {
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(mockCalenderResult)));
+                        .withBody(mockCalendarResult)));
 
         MvcResult creationResult = mvc
-                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(FULL_WIDGET_JSON))
+                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                        .content(WidgetTestFixtures.fullWidgetJson(baseUrl)))
                 .andReturn();
 
         UUID widgetId = extractIdFromResponse(creationResult);
@@ -115,7 +118,7 @@ public class WidgetEndpointsControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", equalTo("application/json")))
-                .andExpect(content().string(equalTo(mockCalenderResult)));
+                .andExpect(content().string(equalTo(mockCalendarResult)));
 
     }
 

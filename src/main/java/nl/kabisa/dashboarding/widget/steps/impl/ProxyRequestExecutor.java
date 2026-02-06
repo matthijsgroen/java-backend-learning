@@ -3,8 +3,8 @@ package nl.kabisa.dashboarding.widget.steps.impl;
 import java.net.URI;
 import java.util.Map;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -42,16 +42,21 @@ public class ProxyRequestExecutor implements StepExecutor {
         String resolvedUrl = context.resolvePlaceholders(urlTemplate);
 
         try {
-            byte[] responseBody = restClient
+            ResponseEntity<byte[]> response = restClient
                     .method(org.springframework.http.HttpMethod.valueOf(method))
                     .uri(new URI(resolvedUrl))
                     .retrieve()
-                    .body(byte[].class);
+                    .toEntity(byte[].class);
+
+            MediaType contentType = response.getHeaders().getContentType();
+            if (contentType == null) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM;
+            }
 
             return new StepExecutionResult(
-                    responseBody,
-                    MediaType.APPLICATION_JSON,
-                    HttpStatus.OK);
+                    response.getBody(),
+                    contentType,
+                    response.getStatusCode());
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute proxy request to " + resolvedUrl, e);
         }

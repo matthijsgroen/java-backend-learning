@@ -27,7 +27,7 @@ public class WidgetEndpointsController {
     }
 
     @GetMapping("/widget/{id}/endpoint/{endpointName}")
-    public ResponseEntity<?> getWidget(@PathVariable String id,
+    public ResponseEntity<?> getWidgetEndpoint(@PathVariable String id,
             @PathVariable String endpointName) throws Exception {
         UUID widgetId;
         try {
@@ -39,7 +39,7 @@ public class WidgetEndpointsController {
         Widget widget = widgetRepository.findById(widgetId)
                 .orElseThrow(() -> new WidgetNotFoundException(widgetId));
 
-        List<DataEndpointModelItem> endpoints = widget.getEndpoints();
+        List<DataEndpointModelItem> endpoints = Optional.ofNullable(widget.getEndpoints()).orElseGet(List::of);
         Optional<DataEndpointModelItem> matchingEndpoint = endpoints.stream()
                 .filter(e -> e.path().equals(endpointName))
                 .findFirst();

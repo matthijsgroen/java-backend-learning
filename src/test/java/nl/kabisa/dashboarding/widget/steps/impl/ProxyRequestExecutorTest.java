@@ -24,11 +24,13 @@ class ProxyRequestExecutorTest {
 
     private WireMockServer wireMockServer;
     private ProxyRequestExecutor executor;
+    private String baseUrl;
 
     @BeforeEach
     void setup() {
-        wireMockServer = new WireMockServer(8089);
+        wireMockServer = new WireMockServer();
         wireMockServer.start();
+        baseUrl = "http://localhost:" + wireMockServer.port();
         executor = new ProxyRequestExecutor();
     }
 
@@ -49,7 +51,7 @@ class ProxyRequestExecutorTest {
 
         Map<String, Object> config = new HashMap<>();
         config.put("method", "GET");
-        config.put("url", "http://localhost:8089/api/calendar/events");
+        config.put("url", baseUrl + "/api/calendar/events");
 
         EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
         Widget widget = new Widget();
@@ -77,7 +79,7 @@ class ProxyRequestExecutorTest {
 
         Map<String, Object> config = new HashMap<>();
         config.put("method", "GET");
-        config.put("url", "http://localhost:8089%secretPath%");
+        config.put("url", baseUrl + "%secretPath%");
 
         EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
         Widget widget = new Widget();
@@ -92,6 +94,7 @@ class ProxyRequestExecutorTest {
 
         // Assert
         assertThat(result.status()).isEqualTo(HttpStatus.OK);
+        assertThat(result.contentType()).isEqualTo(MediaType.valueOf("text/calendar"));
         assertThat(result.body()).isEqualTo("BEGIN:VCALENDAR".getBytes());
         wireMockServer.verify(getRequestedFor(urlEqualTo("/ical/abcd1234")));
     }
@@ -108,7 +111,7 @@ class ProxyRequestExecutorTest {
 
         Map<String, Object> config = new HashMap<>();
         config.put("method", "GET");
-        config.put("url", "http://localhost:8089%path%");
+        config.put("url", baseUrl + "%path%");
 
         EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
         Widget widget = new Widget();
@@ -123,6 +126,7 @@ class ProxyRequestExecutorTest {
 
         // Assert
         assertThat(result.status()).isEqualTo(HttpStatus.OK);
+        assertThat(result.contentType()).isEqualTo(MediaType.APPLICATION_JSON);
         assertThat(result.body()).isEqualTo("{\"events\": []}".getBytes());
         wireMockServer.verify(getRequestedFor(urlEqualTo("/events")));
     }
@@ -139,7 +143,7 @@ class ProxyRequestExecutorTest {
 
         Map<String, Object> config = new HashMap<>();
         config.put("method", "GET");
-        config.put("url", "http://localhost:8089%apiPath%");
+        config.put("url", baseUrl + "%apiPath%");
 
         EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
         Widget widget = new Widget();
@@ -159,6 +163,7 @@ class ProxyRequestExecutorTest {
 
         // Assert - Should use secret value, not frontend value
         assertThat(result.status()).isEqualTo(HttpStatus.OK);
+        assertThat(result.contentType()).isEqualTo(MediaType.APPLICATION_JSON);
         assertThat(result.body()).isEqualTo("{\"data\": \"secret\"}".getBytes());
         wireMockServer.verify(getRequestedFor(urlEqualTo("/secret/path")));
     }
