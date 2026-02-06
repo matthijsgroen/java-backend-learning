@@ -43,7 +43,7 @@ public final class WidgetTestFixtures {
                 "version": "1.0.0",
                 "configuration": {
                     "title": "Lunch & Learn binnenkort",
-                    "secretIcalUrl": "https://secrets.kabisa.nl/ical/abcd1234",
+                    "secretIcalUrl": "https://localhost:8089/ical/abcd1234",
                     "lookAhead": 60,
                     "lookBack": 0
                 },

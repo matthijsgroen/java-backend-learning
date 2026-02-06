@@ -1,6 +1,7 @@
 package nl.kabisa.dashboarding.widget.orm;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,7 +12,9 @@ import jakarta.persistence.*;
 import nl.kabisa.dashboarding.widget.EncryptionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.security.GeneralSecurityException;
+import nl.kabisa.dashboarding.widget.dto.DataEndpointModelItem;
 
 @Entity
 @Table(name = "widgets")
@@ -50,7 +53,7 @@ public class Widget {
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Object endpoints;
+    private List<DataEndpointModelItem> endpoints;
 
     public Widget() {
     }
@@ -90,7 +93,9 @@ public class Widget {
         if (secretsConfiguration != null && widgetType != null && !secretsConfiguration.isEmpty()) {
             try {
                 String decryptedJson = EncryptionUtil.decrypt(secretsConfiguration, widgetType);
-                decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson, Map.class);
+                decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson,
+                        new TypeReference<Map<String, Object>>() {
+                        });
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException("Decryption of secrets configuration failed: " + e.getMessage(), e);
             } catch (JsonProcessingException e) {
@@ -164,11 +169,11 @@ public class Widget {
         this.configurationModel = configurationModel;
     }
 
-    public Object getEndpoints() {
-        return endpoints;
+    public List<DataEndpointModelItem> getEndpoints() {
+        return this.endpoints;
     }
 
-    public void setEndpoints(Object endpoints) {
+    public void setEndpoints(List<DataEndpointModelItem> endpoints) {
         this.endpoints = endpoints;
     }
 

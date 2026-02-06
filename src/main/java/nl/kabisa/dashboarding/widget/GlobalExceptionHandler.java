@@ -64,6 +64,14 @@ public class GlobalExceptionHandler {
                 "message", ex.getMessage());
     }
 
+    @ExceptionHandler(EndpointNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> handleEndpointNotFound(EndpointNotFoundException ex) {
+        return Map.of(
+                "error", "Not Found",
+                "message", ex.getMessage());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleIllegalArgument(IllegalArgumentException ex) {
