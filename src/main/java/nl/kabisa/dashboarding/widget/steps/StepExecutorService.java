@@ -1,10 +1,12 @@
 package nl.kabisa.dashboarding.widget.steps;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import nl.kabisa.dashboarding.widget.dto.EndpointProcessingStep;
 import nl.kabisa.dashboarding.widget.orm.Widget;
@@ -15,14 +17,14 @@ public class StepExecutorService {
     private final Map<String, StepExecutor> executorsByAction;
 
     public StepExecutorService(List<StepExecutor> executors) {
-        this.executorsByAction = new HashMap<>();
-        for (StepExecutor executor : executors) {
-            this.executorsByAction.put(executor.action(), executor);
-        }
+        this.executorsByAction = executors.stream()
+                .collect(Collectors.toMap(
+                        StepExecutor::action,
+                        Function.identity()));
     }
 
     public StepExecutionResult executeSteps(List<EndpointProcessingStep> steps, Widget widget) {
-        if (steps == null || steps.isEmpty()) {
+        if (CollectionUtils.isEmpty(steps)) {
             throw new IllegalArgumentException("Endpoint has no steps to execute");
         }
 

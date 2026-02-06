@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import nl.kabisa.dashboarding.widget.configuration.ProxyConfiguration;
@@ -96,6 +98,14 @@ public class ProxyRequestExecutor implements StepExecutor {
                     response.getBody(),
                     contentType,
                     response.getStatusCode());
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            // Capture error response body and return it with error status code
+            byte[] responseBody = e.getResponseBodyAsString().getBytes();
+            MediaType contentType = MediaType.APPLICATION_JSON;
+            if (e.getResponseHeaders() != null && e.getResponseHeaders().getContentType() != null) {
+                contentType = e.getResponseHeaders().getContentType();
+            }
+            return new StepExecutionResult(responseBody, contentType, e.getStatusCode());
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute proxy request to " + resolvedUrl, e);
         }

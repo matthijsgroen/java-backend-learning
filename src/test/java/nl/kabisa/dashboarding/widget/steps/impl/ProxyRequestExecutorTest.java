@@ -302,4 +302,32 @@ class ProxyRequestExecutorTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Host not in allowlist");
     }
+
+    @Test
+    void testProxyRequest404Response() {
+        // Arrange - mock endpoint returns 404
+        wireMockServer.stubFor(
+                get(urlEqualTo("/api/missing/resource"))
+                        .willReturn(aResponse()
+                                .withStatus(404)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"error\": \"Resource not found\"}")));
+
+        Map<String, Object> config = new HashMap<>();
+        config.put("method", "GET");
+        config.put("url", baseUrl + "/api/missing/resource");
+
+        EndpointProcessingStep step = new EndpointProcessingStep("proxyRequest", config);
+        Widget widget = new Widget();
+        StepExecutionContext context = new StepExecutionContext(widget, null);
+
+        // Act
+        StepExecutionResult result = executor.execute(step, context);
+
+        // Assert
+        assertThat(result.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(result.contentType()).isEqualTo(MediaType.APPLICATION_JSON);
+        assertThat(result.body()).isEqualTo("{\"error\": \"Resource not found\"}".getBytes());
+        wireMockServer.verify(getRequestedFor(urlEqualTo("/api/missing/resource")));
+    }
 }
