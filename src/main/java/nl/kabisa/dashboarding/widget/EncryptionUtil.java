@@ -1,18 +1,24 @@
 package nl.kabisa.dashboarding.widget;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 public class EncryptionUtil {
     private static final String ALGORITHM = "AES";
-    private static final int KEY_SIZE = 16; // 128-bit key for AES
+    private static final int KEY_SIZE = 128; // 128-bit key for AES
+    private static final String PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256";
+    private static final int ITERATIONS = 65536;
+    private static final String SALT = "widget-encryption-salt"; // Fixed salt for consistent key derivation
 
     /**
-     * Encrypts a string using AES with a key derived from the provided key string.
+     * Encrypts a string using AES with a key derived from the provided key string
+     * using PBKDF2.
      * 
      * @param plaintext the text to encrypt
-     * @param keyString the key string (will be padded/truncated to 16 bytes)
+     * @param keyString the key string (will be hashed using PBKDF2)
      * @return Base64 encoded encrypted string
      */
     public static String encrypt(String plaintext, String keyString) throws Exception {
@@ -32,7 +38,7 @@ public class EncryptionUtil {
 
     /**
      * Decrypts a Base64-encoded string using AES with a key derived from the
-     * provided key string.
+     * provided key string using PBKDF2.
      * 
      * @param encryptedText the Base64 encoded encrypted text
      * @param keyString     the key string (must match the one used for encryption)
@@ -55,23 +61,17 @@ public class EncryptionUtil {
     }
 
     /**
-     * Derives a fixed-size key from the provided key string by padding or
-     * truncating to KEY_SIZE bytes.
+     * Derives a fixed-size key from the provided key string using PBKDF2.
+     * Uses a fixed salt and iteration count for deterministic key derivation.
      */
-    private static byte[] deriveKey(String keyString) {
-        byte[] keyBytes = keyString.getBytes();
-        byte[] key = new byte[KEY_SIZE];
+    private static byte[] deriveKey(String keyString) throws Exception {
+        PBEKeySpec spec = new PBEKeySpec(
+                keyString.toCharArray(),
+                SALT.getBytes(),
+                ITERATIONS,
+                KEY_SIZE);
 
-        if (keyBytes.length >= KEY_SIZE) {
-            System.arraycopy(keyBytes, 0, key, 0, KEY_SIZE);
-        } else {
-            System.arraycopy(keyBytes, 0, key, 0, keyBytes.length);
-            // Pad with zeros if key is shorter than KEY_SIZE
-            for (int i = keyBytes.length; i < KEY_SIZE; i++) {
-                key[i] = 0;
-            }
-        }
-
-        return key;
+        SecretKeyFactory factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM);
+        return factory.generateSecret(spec).getEncoded();
     }
 }
