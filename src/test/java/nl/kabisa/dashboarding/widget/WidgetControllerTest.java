@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
@@ -185,9 +184,11 @@ public class WidgetControllerTest {
     public void createWidgetWithWrongConfigScope() throws Exception {
         mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(WIDGET_WITH_WRONG_CONFIG_SCOPE)
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().is4xxClientError()).andExpect(content()
-                        .string(equalTo(
-                                "{\"message\":\"JSON parse error: Cannot deserialize value of type `nl.kabisa.dashboarding.widget.dto.ConfigurationFieldScope` from String \\\"blockchain\\\": not one of the values accepted for Enum class: [frontend, backend]\",\"error\":\"JSON parsing failed\"}")));
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.error").value("JSON parsing failed"))
+                .andExpect(jsonPath("$.message").value(equalTo(
+                        "JSON parse error: Cannot deserialize value of type `nl.kabisa.dashboarding.widget.dto.ConfigurationFieldScope` from String \"blockchain\": not one of the values accepted for Enum class: [frontend, backend]")));
+
     }
 
 }
