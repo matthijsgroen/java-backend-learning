@@ -9,10 +9,11 @@ Items are grouped by theme, ordered roughly by dependency (foundations first).
 
 The entire ownership, sharing, and permission model depends on a user identity concept that does not yet exist.
 
-- [ ] **Create `User` entity** — id (UUID), username, email, passwordHash, createdAt, modifiedAt
-- [ ] **Create `UserRepository`** with lookup by username/email
-- [ ] **Create `UserService`** with registration and profile management
-- [ ] **Expose `POST /users` (register) and `GET /users/me`** endpoints
+- [x] **Create `User` entity** — id (UUID), username, email, passwordHash, createdAt, modifiedAt
+- [x] **Create `UserRepository`** with lookup by username/email
+- [x] **Create `UserService`** with registration and profile management
+- [x] **Expose `POST /users` (register) and `GET /users/me`** endpoints
+  - `GET /users/me` currently uses `X-User-Id` header as a stub; will be replaced with JWT subject in Story 2
 - [ ] **Add `owner` (User FK) to `Widget` entity** — every widget must have an owner
 - [ ] **Add `owner` (User FK) to `Dashboard` entity** — every dashboard must have an owner
 
@@ -24,10 +25,12 @@ All management endpoints are currently unprotected. Authentication must be in pl
 
 - [ ] **Add `spring-boot-starter-security` to `pom.xml`**
 - [ ] **Implement `SecurityConfig`** — define public vs. protected endpoint rules
+  - `PasswordEncoder` bean is already available in `user/PasswordEncoderConfig.java`; move or `@Import` it here
 - [ ] **Choose and implement an auth mechanism** (JWT, session, or OAuth2)
 - [ ] **Protect all mutating endpoints** (`POST`, `PUT`, `DELETE` on `/widget` and `/dashboards`) — require authentication
 - [ ] **Return `401 Unauthorized`** for unauthenticated requests to protected endpoints
 - [ ] **Return `403 Forbidden`** when an authenticated user attempts an action they are not allowed to perform
+- [ ] **Replace `X-User-Id` header stub in `GET /users/me`** with JWT subject from `SecurityContextHolder`
 
 ---
 

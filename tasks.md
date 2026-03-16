@@ -5,7 +5,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 1 — User registration and profile
+## Story 1 — User registration and profile ✅ DONE
 
 > **As a new user, I want to register an account and view my own profile,
 > so that I have an identity in the system.**
@@ -23,6 +23,13 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ### Does not include
 - Authentication (Story 2)
 - Ownership on Widget or Dashboard (Story 4 / Story 5)
+
+### Implementation notes
+- `PasswordEncoder` exposed as a `@Bean` via `user/PasswordEncoderConfig.java` — reuse or move to `SecurityConfig` in Story 2
+- `GlobalExceptionHandler` moved to root package `nl.kabisa.dashboarding` (shared across all modules)
+- `ValidationErrorResponse` also moved to root package
+- `GET /users/me` identifies the caller via `X-User-Id` header (UUID) — **swap to JWT subject extraction in Story 2**
+- `spring.jackson.datatype.datetime.write-dates-as-timestamps=false` added to `application.properties` (Jackson 3 / Spring Boot 4 syntax — differs from Jackson 2's `spring.jackson.serialization.*`)
 
 ---
 
@@ -49,6 +56,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ### Does not include
 - CORS (Story 3)
 - Ownership enforcement (Story 4)
+
+### Implementation notes (carry-over from Story 1)
+- **`PasswordEncoder` bean**: already defined in `user/PasswordEncoderConfig.java` — move it into `SecurityConfig` (or keep it and `@Import` it) so it lives next to the rest of the security wiring
+- **`GET /users/me` stub**: currently reads `X-User-Id` header — replace with `SecurityContextHolder.getContext().getAuthentication().getName()` (JWT subject) and remove the `X-User-Id` header logic entirely
+- **Test helper**: consider a `@TestSecurityContext` utility or a `JwtTestHelper` that mints test tokens so all existing integration tests can keep running without reworking their MockMvc calls from scratch
 
 ---
 
