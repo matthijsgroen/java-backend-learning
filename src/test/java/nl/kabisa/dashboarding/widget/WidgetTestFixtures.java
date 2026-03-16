@@ -16,6 +16,33 @@ public final class WidgetTestFixtures {
             }
             """;
 
+    public static String minimalWidgetWithParentJson(String parentId) {
+        return """
+                {
+                    "widgetType": "google-calendar-widget",
+                    "version": "1.0.0",
+                    "configuration": {},
+                    "configurationModel": [],
+                    "dataEndpoints": [],
+                    "parentId": "%s"
+                }
+                """.formatted(parentId);
+    }
+
+    public static String updateParentJson(String parentId) {
+        return """
+                {
+                    "parentId": "%s"
+                }
+                """.formatted(parentId);
+    }
+
+    public static final String UPDATE_REMOVE_PARENT_JSON = """
+            {
+                "parentId": null
+            }
+            """;
+
     public static final String WIDGET_WITH_FRONTEND_CONFIG_JSON = """
             {
                 "widgetType": "google-calendar-widget",
@@ -153,3 +180,4 @@ public final class WidgetTestFixtures {
             }
             """;
 }
+

@@ -79,4 +79,12 @@ public class GlobalExceptionHandler {
                 "error", "Bad Request",
                 "message", ex.getMessage());
     }
+
+    @ExceptionHandler(WidgetCycleException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleWidgetCycle(WidgetCycleException ex) {
+        return Map.of(
+                "error", "Conflict",
+                "message", ex.getMessage());
+    }
 }

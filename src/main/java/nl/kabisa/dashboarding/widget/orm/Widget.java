@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.*;
@@ -24,6 +26,11 @@ public class Widget {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Widget parent;
 
     @Column(nullable = false)
     private String widgetType;
@@ -111,6 +118,18 @@ public class Widget {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public Widget getParent() {
+        return parent;
+    }
+
+    public void setParent(Widget parent) {
+        this.parent = parent;
+    }
+
+    public UUID getParentId() {
+        return parent != null ? parent.getId() : null;
     }
 
     public String getWidgetType() {

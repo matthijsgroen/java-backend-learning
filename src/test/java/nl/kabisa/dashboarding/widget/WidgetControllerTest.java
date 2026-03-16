@@ -151,6 +151,8 @@ public class WidgetControllerTest {
                                 .andExpect(jsonPath("$.configuration.lookAhead").value(60))
                                 .andExpect(jsonPath("$.configuration.lookBack").value(0))
                                 .andExpect(jsonPath("$.configuration.secretIcalUrl").doesNotExist())
+                                .andExpect(jsonPath("$.parentId").doesNotExist())
+                                .andExpect(jsonPath("$.childIds").isArray())
                                 .andReturn();
         }
 
