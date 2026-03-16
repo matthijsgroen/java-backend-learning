@@ -1,17 +1,22 @@
 package nl.kabisa.dashboarding.widget.orm;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.*;
 import nl.kabisa.dashboarding.widget.EncryptionUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.security.GeneralSecurityException;
+import nl.kabisa.dashboarding.widget.dto.DataEndpointModelItem;
 
 @Entity
 @Table(name = "widgets")
@@ -21,6 +26,11 @@ public class Widget {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Widget parent;
 
     @Column(nullable = false)
     private String widgetType;
@@ -34,7 +44,7 @@ public class Widget {
     @Column
     private LocalDateTime modifiedAt;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "jsonb", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> frontendConfiguration;
 
@@ -50,7 +60,7 @@ public class Widget {
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Object endpoints;
+    private List<DataEndpointModelItem> endpoints;
 
     public Widget() {
     }
@@ -90,7 +100,9 @@ public class Widget {
         if (secretsConfiguration != null && widgetType != null && !secretsConfiguration.isEmpty()) {
             try {
                 String decryptedJson = EncryptionUtil.decrypt(secretsConfiguration, widgetType);
-                decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson, Map.class);
+                decryptedSecretsConfiguration = OBJECT_MAPPER.readValue(decryptedJson,
+                        new TypeReference<Map<String, Object>>() {
+                        });
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException("Decryption of secrets configuration failed: " + e.getMessage(), e);
             } catch (JsonProcessingException e) {
@@ -106,6 +118,18 @@ public class Widget {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public Widget getParent() {
+        return parent;
+    }
+
+    public void setParent(Widget parent) {
+        this.parent = parent;
+    }
+
+    public UUID getParentId() {
+        return parent != null ? parent.getId() : null;
     }
 
     public String getWidgetType() {
@@ -164,11 +188,11 @@ public class Widget {
         this.configurationModel = configurationModel;
     }
 
-    public Object getEndpoints() {
-        return endpoints;
+    public List<DataEndpointModelItem> getEndpoints() {
+        return this.endpoints;
     }
 
-    public void setEndpoints(Object endpoints) {
+    public void setEndpoints(List<DataEndpointModelItem> endpoints) {
         this.endpoints = endpoints;
     }
 

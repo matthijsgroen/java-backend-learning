@@ -16,6 +16,33 @@ public final class WidgetTestFixtures {
             }
             """;
 
+    public static String minimalWidgetWithParentJson(String parentId) {
+        return """
+                {
+                    "widgetType": "google-calendar-widget",
+                    "version": "1.0.0",
+                    "configuration": {},
+                    "configurationModel": [],
+                    "dataEndpoints": [],
+                    "parentId": "%s"
+                }
+                """.formatted(parentId);
+    }
+
+    public static String updateParentJson(String parentId) {
+        return """
+                {
+                    "parentId": "%s"
+                }
+                """.formatted(parentId);
+    }
+
+    public static final String UPDATE_REMOVE_PARENT_JSON = """
+            {
+                "parentId": null
+            }
+            """;
+
     public static final String WIDGET_WITH_FRONTEND_CONFIG_JSON = """
             {
                 "widgetType": "google-calendar-widget",
@@ -37,46 +64,50 @@ public final class WidgetTestFixtures {
             }
             """;
 
-    public static final String FULL_WIDGET_JSON = """
-            {
-                "widgetType": "google-calendar-widget",
-                "version": "1.0.0",
-                "configuration": {
-                    "title": "Lunch & Learn binnenkort",
-                    "secretIcalUrl": "https://secrets.kabisa.nl/ical/abcd1234",
-                    "lookAhead": 60,
-                    "lookBack": 0
-                },
-                "configurationModel": [{
-                    "id": "title",
-                    "type": "string",
-                    "scope": "frontend"
-                }, {
-                    "id": "secretIcalUrl",
-                    "type": "string",
-                    "scope": "backend"
-                }, {
-                    "id": "lookAhead",
-                    "type": "integer",
-                    "scope": "frontend"
-                }, {
-                    "id": "lookBack",
-                    "type": "integer",
-                    "scope": "frontend"
-                }],
-                "dataEndpoints": [{
-                    "path": "calendar",
-                    "cache": 600000,
-                    "steps": [{
-                        "action": "tunnelRequest",
-                        "config": {
-                            "method": "GET",
-                            "url": "%secretIcalUrl%"
-                        }
+    public static String fullWidgetJson(String baseUrl) {
+        return """
+                {
+                    "widgetType": "google-calendar-widget",
+                    "version": "1.0.0",
+                    "configuration": {
+                        "title": "Lunch & Learn binnenkort",
+                        "secretIcalUrl": "%s/ical/abcd1234",
+                        "lookAhead": 60,
+                        "lookBack": 0
+                    },
+                    "configurationModel": [{
+                        "id": "title",
+                        "type": "string",
+                        "scope": "frontend"
+                    }, {
+                        "id": "secretIcalUrl",
+                        "type": "string",
+                        "scope": "backend"
+                    }, {
+                        "id": "lookAhead",
+                        "type": "integer",
+                        "scope": "frontend"
+                    }, {
+                        "id": "lookBack",
+                        "type": "integer",
+                        "scope": "frontend"
+                    }],
+                    "dataEndpoints": [{
+                        "path": "calendar",
+                        "cache": 600000,
+                        "steps": [{
+                            "action": "proxyRequest",
+                            "config": {
+                                "method": "GET",
+                                "url": "%%secretIcalUrl%%"
+                            }
+                        }]
                     }]
-                }]
-            }
-            """;
+                }
+                """.formatted(baseUrl);
+    }
+
+    public static final String FULL_WIDGET_JSON = fullWidgetJson("http://localhost:8089");
 
     public static final String INVALID_WIDGET_JSON = """
             {
@@ -149,3 +180,4 @@ public final class WidgetTestFixtures {
             }
             """;
 }
+

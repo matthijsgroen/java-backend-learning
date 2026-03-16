@@ -25,5 +25,7 @@ public record CreateWidgetRequest(
 
                 @Valid @Schema(description = "Metadata describing configuration structure and constraints") List<ConfigurationModelItem> configurationModel,
 
-                @Schema(description = "Optional custom backend endpoints for widget data management") List<DataEndpointModelItem> dataEndpoints) {
+                @Schema(description = "Optional custom backend endpoints for widget data management") List<DataEndpointModelItem> dataEndpoints,
+
+                @Schema(description = "Optional parent widget ID", example = "550e8400-e29b-41d4-a716-446655440000", nullable = true) String parentId) {
 }
