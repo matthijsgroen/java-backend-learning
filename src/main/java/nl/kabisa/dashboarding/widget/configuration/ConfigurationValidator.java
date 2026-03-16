@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import nl.kabisa.dashboarding.widget.ConfigurationValidationException;
 import nl.kabisa.dashboarding.widget.dto.ConfigurationFieldScope;
 import nl.kabisa.dashboarding.widget.dto.ConfigurationFieldType;
 import nl.kabisa.dashboarding.widget.dto.ConfigurationModelItem;

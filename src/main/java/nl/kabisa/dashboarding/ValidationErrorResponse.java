@@ -1,4 +1,4 @@
-package nl.kabisa.dashboarding.widget;
+package nl.kabisa.dashboarding;
 
 import java.util.List;
 import java.util.Map;
