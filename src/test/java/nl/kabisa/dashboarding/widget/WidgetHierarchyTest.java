@@ -2,13 +2,18 @@ package nl.kabisa.dashboarding.widget;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -28,17 +33,38 @@ public class WidgetHierarchyTest {
     @Autowired
     private WidgetRepository widgetRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTestHelper jwtTestHelper;
+
+    private User testUser;
+    private String authHeader;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         widgetRepository.deleteAll();
+        userRepository.deleteAll();
+
+        testUser = new User();
+        testUser.setUsername("testuser");
+        testUser.setEmail("testuser@test.local");
+        testUser.setPasswordHash(passwordEncoder.encode("testpassword"));
+        testUser = userRepository.save(testUser);
+        authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private UUID createWidget(String json) throws Exception {
         MvcResult result = mvc.perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
                         .accept(MediaType.APPLICATION_JSON))
@@ -57,6 +83,7 @@ public class WidgetHierarchyTest {
     @Test
     public void createWidgetWithNoParentSucceeds() throws Exception {
         mvc.perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(MINIMAL_WIDGET_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -70,6 +97,7 @@ public class WidgetHierarchyTest {
         UUID parentId = createMinimalWidget();
 
         MvcResult result = mvc.perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(minimalWidgetWithParentJson(parentId.toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -82,6 +110,7 @@ public class WidgetHierarchyTest {
 
         // Verify child has correct parentId in GET
         mvc.perform(get("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.parentId").value(parentId.toString()));
@@ -91,6 +120,7 @@ public class WidgetHierarchyTest {
     public void createWidgetWithNonExistentParentReturns404() throws Exception {
         String randomId = UUID.randomUUID().toString();
         mvc.perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(minimalWidgetWithParentJson(randomId))
                         .accept(MediaType.APPLICATION_JSON))
@@ -100,6 +130,7 @@ public class WidgetHierarchyTest {
     @Test
     public void createWidgetWithInvalidParentIdReturnsBadRequest() throws Exception {
         mvc.perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(minimalWidgetWithParentJson("not-a-uuid"))
                         .accept(MediaType.APPLICATION_JSON))
@@ -113,6 +144,7 @@ public class WidgetHierarchyTest {
         UUID id = createMinimalWidget();
 
         mvc.perform(get("/widget/" + id)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.parentId").doesNotExist())
@@ -126,6 +158,7 @@ public class WidgetHierarchyTest {
         UUID childId = createWidget(minimalWidgetWithParentJson(parentId.toString()));
 
         mvc.perform(get("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.parentId").value(parentId.toString()));
@@ -138,6 +171,7 @@ public class WidgetHierarchyTest {
         UUID child2Id = createWidget(minimalWidgetWithParentJson(parentId.toString()));
 
         MvcResult result = mvc.perform(get("/widget/" + parentId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.childIds").isArray())
@@ -166,6 +200,7 @@ public class WidgetHierarchyTest {
         createWidget(minimalWidgetWithParentJson(childId.toString()));
 
         mvc.perform(get("/widget/" + parentId + "/children")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
@@ -177,6 +212,7 @@ public class WidgetHierarchyTest {
         UUID id = createMinimalWidget();
 
         mvc.perform(get("/widget/" + id + "/children")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -186,6 +222,7 @@ public class WidgetHierarchyTest {
     @Test
     public void getChildrenOfNonExistentWidgetReturns404() throws Exception {
         mvc.perform(get("/widget/" + UUID.randomUUID() + "/children")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -198,6 +235,7 @@ public class WidgetHierarchyTest {
         UUID childId = createMinimalWidget();
 
         mvc.perform(put("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(parentId.toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -206,6 +244,7 @@ public class WidgetHierarchyTest {
                 .andExpect(jsonPath("$.message").value("Widget updated successfully"));
 
         mvc.perform(get("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.parentId").value(parentId.toString()));
     }
@@ -218,12 +257,14 @@ public class WidgetHierarchyTest {
 
         // Re-parent from A to B
         mvc.perform(put("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(parentB.toString()))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.parentId").value(parentB.toString()));
     }
@@ -234,12 +275,14 @@ public class WidgetHierarchyTest {
         UUID childId = createWidget(minimalWidgetWithParentJson(parentId.toString()));
 
         mvc.perform(put("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(UPDATE_REMOVE_PARENT_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.parentId").doesNotExist());
     }
@@ -247,6 +290,7 @@ public class WidgetHierarchyTest {
     @Test
     public void updateNonExistentWidgetReturns404() throws Exception {
         mvc.perform(put("/widget/" + UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(UPDATE_REMOVE_PARENT_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -258,6 +302,7 @@ public class WidgetHierarchyTest {
         UUID childId = createMinimalWidget();
 
         mvc.perform(put("/widget/" + childId)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(UUID.randomUUID().toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -271,6 +316,7 @@ public class WidgetHierarchyTest {
         UUID id = createMinimalWidget();
 
         mvc.perform(put("/widget/" + id)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(id.toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -285,6 +331,7 @@ public class WidgetHierarchyTest {
         UUID widgetB = createWidget(minimalWidgetWithParentJson(widgetA.toString()));
 
         mvc.perform(put("/widget/" + widgetA)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(widgetB.toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -300,6 +347,7 @@ public class WidgetHierarchyTest {
         UUID widgetC = createWidget(minimalWidgetWithParentJson(widgetB.toString()));
 
         mvc.perform(put("/widget/" + widgetA)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(widgetC.toString()))
                         .accept(MediaType.APPLICATION_JSON))
@@ -315,12 +363,14 @@ public class WidgetHierarchyTest {
         UUID widgetC = createWidget(minimalWidgetWithParentJson(widgetA.toString()));
 
         mvc.perform(put("/widget/" + widgetB)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateParentJson(widgetC.toString()))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/widget/" + widgetB)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.parentId").value(widgetC.toString()));
     }
@@ -332,11 +382,13 @@ public class WidgetHierarchyTest {
         UUID id = createMinimalWidget();
 
         mvc.perform(delete("/widget/" + id)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deletedCount").value(1));
 
         mvc.perform(get("/widget/" + id)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
@@ -349,6 +401,7 @@ public class WidgetHierarchyTest {
         createWidget(minimalWidgetWithParentJson(widgetA.toString()));
 
         mvc.perform(delete("/widget/" + widgetA)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deletedCount").value(3));
@@ -365,6 +418,7 @@ public class WidgetHierarchyTest {
         createWidget(minimalWidgetWithParentJson(widgetC.toString()));
 
         mvc.perform(delete("/widget/" + widgetA)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deletedCount").value(4));
@@ -380,12 +434,14 @@ public class WidgetHierarchyTest {
         createWidget(minimalWidgetWithParentJson(widgetB.toString()));
 
         mvc.perform(delete("/widget/" + widgetB)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deletedCount").value(2));
 
         // A still exists
         mvc.perform(get("/widget/" + widgetA)
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -395,6 +451,7 @@ public class WidgetHierarchyTest {
     @Test
     public void deleteNonExistentWidgetReturns404() throws Exception {
         mvc.perform(delete("/widget/" + UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }

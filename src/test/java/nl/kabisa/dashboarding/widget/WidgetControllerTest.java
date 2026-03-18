@@ -1,11 +1,16 @@
 package nl.kabisa.dashboarding.widget;
 
+import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,7 +20,6 @@ import java.util.UUID;
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 
 import static nl.kabisa.dashboarding.widget.WidgetTestFixtures.*;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -34,9 +38,29 @@ public class WidgetControllerTest {
         @Autowired
         private WidgetRepository widgetRepository;
 
+        @Autowired
+        private UserRepository userRepository;
+
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
+        @Autowired
+        private JwtTestHelper jwtTestHelper;
+
+        private User testUser;
+        private String authHeader;
+
         @BeforeEach
         void setUp() {
                 widgetRepository.deleteAll();
+                userRepository.deleteAll();
+
+                testUser = new User();
+                testUser.setUsername("testuser");
+                testUser.setEmail("testuser@test.local");
+                testUser.setPasswordHash(passwordEncoder.encode("testpassword"));
+                testUser = userRepository.save(testUser);
+                authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
         }
 
         private UUID extractIdFromResponse(MvcResult result) throws Exception {
@@ -50,7 +74,9 @@ public class WidgetControllerTest {
         @Test
         public void createMinimalWidgetWithoutConfiguration() throws Exception {
                 MvcResult result = mvc
-                                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                                .perform(post("/widget")
+                                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                                .contentType(MediaType.APPLICATION_JSON)
                                                 .content(MINIMAL_WIDGET_JSON)
                                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isCreated())
@@ -66,7 +92,9 @@ public class WidgetControllerTest {
         @Test
         public void createMinimalWidgetWithConfiguration() throws Exception {
                 MvcResult result = mvc
-                                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                                .perform(post("/widget")
+                                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                                .contentType(MediaType.APPLICATION_JSON)
                                                 .content(WIDGET_WITH_FRONTEND_CONFIG_JSON)
                                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isCreated())
@@ -91,7 +119,9 @@ public class WidgetControllerTest {
         @Test
         public void createWidgetWithSecrets() throws Exception {
                 MvcResult result = mvc
-                                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                                .perform(post("/widget")
+                                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                                .contentType(MediaType.APPLICATION_JSON)
                                                 .content(FULL_WIDGET_JSON)
                                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isCreated())
@@ -124,7 +154,10 @@ public class WidgetControllerTest {
 
         @Test
         public void invalidCreateWidget() throws Exception {
-                mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON).content(INVALID_WIDGET_JSON)
+                mvc.perform(post("/widget")
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(INVALID_WIDGET_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isUnprocessableContent())
                                 .andExpect(jsonPath("$.status").value(422))
@@ -135,14 +168,18 @@ public class WidgetControllerTest {
         @Test
         public void getWidgetWithSecrets() throws Exception {
                 MvcResult creationResult = mvc
-                                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                                .perform(post("/widget")
+                                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                                .contentType(MediaType.APPLICATION_JSON)
                                                 .content(FULL_WIDGET_JSON)
                                                 .accept(MediaType.APPLICATION_JSON))
                                 .andReturn();
 
                 UUID widgetId = extractIdFromResponse(creationResult);
 
-                mvc.perform(get("/widget/" + widgetId.toString()).contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(get("/widget/" + widgetId.toString())
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.widgetType").value("google-calendar-widget"))
@@ -158,21 +195,27 @@ public class WidgetControllerTest {
 
         @Test
         public void getNonExistingWidgetReturnsNotFound() throws Exception {
-                mvc.perform(get("/widget/" + UUID.randomUUID().toString()).contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(get("/widget/" + UUID.randomUUID().toString())
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().is4xxClientError());
         }
 
         @Test
         public void getWidgetWithInvalidIdReturnsBadRequest() throws Exception {
-                mvc.perform(get("/widget/invalid-uuid").contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(get("/widget/invalid-uuid")
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().is4xxClientError());
         }
 
         @Test
         public void createWidgetWithConfigDataTypeError() throws Exception {
-                mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(post("/widget")
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .content(WIDGET_WITH_WRONG_CONFIG_DATA_TYPE)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isUnprocessableContent())
@@ -184,7 +227,9 @@ public class WidgetControllerTest {
 
         @Test
         public void createWidgetWithMissingRequiredConfig() throws Exception {
-                mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(post("/widget")
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .content(WIDGET_WITH_MISSING_FIELD_IN_CONFIG)
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isUnprocessableContent())
@@ -195,13 +240,14 @@ public class WidgetControllerTest {
 
         @Test
         public void createWidgetWithWrongConfigScope() throws Exception {
-                mvc.perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                mvc.perform(post("/widget")
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .content(WIDGET_WITH_WRONG_CONFIG_SCOPE)
                                 .accept(MediaType.APPLICATION_JSON))
-                                .andExpect(status().is4xxClientError())
-                                .andExpect(jsonPath("$.error").value("JSON parsing failed"))
-                                .andExpect(jsonPath("$.message").value(equalTo(
-                                                "JSON parse error: Cannot deserialize value of type `nl.kabisa.dashboarding.widget.dto.ConfigurationFieldScope` from String \"blockchain\": not one of the values accepted for Enum class: [frontend, backend]")));
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("Bad Request"))
+                                .andExpect(jsonPath("$.message").value("Malformed JSON request body"));
 
         }
 

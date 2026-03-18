@@ -1,11 +1,16 @@
 package nl.kabisa.dashboarding.dashboard;
 
+import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import nl.kabisa.dashboarding.dashboard.orm.Dashboard;
@@ -30,9 +35,29 @@ class DashboardControllerTest {
     @Autowired
     private DashboardRepository dashboardRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTestHelper jwtTestHelper;
+
+    private User testUser;
+    private String authHeader;
+
     @BeforeEach
     void setUp() {
         dashboardRepository.deleteAll();
+        userRepository.deleteAll();
+
+        testUser = new User();
+        testUser.setUsername("testuser");
+        testUser.setEmail("testuser@test.local");
+        testUser.setPasswordHash(passwordEncoder.encode("testpassword"));
+        testUser = userRepository.save(testUser);
+        authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
     }
 
     @Test
@@ -44,7 +69,9 @@ class DashboardControllerTest {
 
         dashboardRepository.saveAll(List.of(beta, deleted, alpha));
 
-        mvc.perform(get("/dashboards").accept(MediaType.APPLICATION_JSON))
+        mvc.perform(get("/dashboards")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].name").value("Alpha"))

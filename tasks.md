@@ -33,7 +33,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 2 — Authentication
+## Story 2 — Authentication ✅ DONE
 
 > **As a registered user, I want to log in and receive a token,
 > so that I can make authenticated API calls.**
@@ -58,9 +58,10 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Ownership enforcement (Story 4)
 
 ### Implementation notes (carry-over from Story 1)
-- **`PasswordEncoder` bean**: already defined in `user/PasswordEncoderConfig.java` — move it into `SecurityConfig` (or keep it and `@Import` it) so it lives next to the rest of the security wiring
-- **`GET /users/me` stub**: currently reads `X-User-Id` header — replace with `SecurityContextHolder.getContext().getAuthentication().getName()` (JWT subject) and remove the `X-User-Id` header logic entirely
-- **Test helper**: consider a `@TestSecurityContext` utility or a `JwtTestHelper` that mints test tokens so all existing integration tests can keep running without reworking their MockMvc calls from scratch
+- **`PasswordEncoder` bean**: moved into `SecurityConfig` (the `user/PasswordEncoderConfig.java` was deleted)
+- **`GET /users/me` stub**: replaced with `Authentication` principal from `SecurityContextHolder` — `X-User-Id` header logic removed
+- **Test helper**: `JwtTestHelper` added in `src/test/java/nl/kabisa/dashboarding/auth/` — mints test tokens; all existing integration tests updated to use it
+- **Additional components**: `AuthEntryPoint` (401 responses), `AuthAccessDeniedHandler` (403 responses), `JwtAuthenticationFilter`, `JwtService`, `JwtProperties`, `UserDetailsServiceImpl`
 
 ---
 
