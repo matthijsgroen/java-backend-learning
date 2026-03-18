@@ -11,6 +11,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I have an identity in the system.**
 
 ### Scope
+
 - New `user` module (`nl.kabisa.dashboarding.user`)
 - `User` entity: `id` (UUID), `username` (unique), `email` (unique), `passwordHash`, `createdAt`, `modifiedAt`
 - `UserRepository` with `findByUsername` and `findByEmail`
@@ -21,10 +22,12 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: register succeeds, duplicate username rejected, duplicate email rejected, get profile
 
 ### Does not include
+
 - Authentication (Story 2)
 - Ownership on Widget or Dashboard (Story 4 / Story 5)
 
 ### Implementation notes
+
 - `PasswordEncoder` exposed as a `@Bean` via `user/PasswordEncoderConfig.java` — reuse or move to `SecurityConfig` in Story 2
 - `GlobalExceptionHandler` moved to root package `nl.kabisa.dashboarding` (shared across all modules)
 - `ValidationErrorResponse` also moved to root package
@@ -39,9 +42,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can make authenticated API calls.**
 
 ### Dependencies
+
 - Story 1 (User entity)
 
 ### Scope
+
 - Add `spring-boot-starter-security` to `pom.xml`
 - Implement `SecurityConfig`:
   - Public: `POST /users` (register), `POST /auth/login`
@@ -54,10 +59,12 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Update all existing integration tests to supply a valid JWT (or use a test helper that bypasses security)
 
 ### Does not include
+
 - CORS (Story 3)
 - Ownership enforcement (Story 4)
 
 ### Implementation notes (carry-over from Story 1)
+
 - **`PasswordEncoder` bean**: moved into `SecurityConfig` (the `user/PasswordEncoderConfig.java` was deleted)
 - **`GET /users/me` stub**: replaced with `Authentication` principal from `SecurityContextHolder` — `X-User-Id` header logic removed
 - **Test helper**: `JwtTestHelper` added in `src/test/java/nl/kabisa/dashboarding/auth/` — mints test tokens; all existing integration tests updated to use it
@@ -71,9 +78,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I control who has access.**
 
 ### Dependencies
+
 - Story 2 (Authentication — JWT and Spring Security must be in place)
 
 ### Scope
+
 - Add `role` enum (`USER`, `ADMIN`) to `User` entity (default: `USER`)
 - Add `enabled` (boolean) to `User` entity (default: `false`) — unapproved users cannot authenticate
 - `POST /users` (register) — remains public; newly registered users are created with `role = USER` and `enabled = false`
@@ -89,31 +98,36 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: register → user is disabled → login rejected; admin approves → login succeeds; admin can list users; admin can change roles; non-admin cannot access admin endpoints (`403`); seeded admin exists on startup
 
 ### Does not include
+
 - Group membership roles (Story 9 — `MEMBER` / `ADMIN` within a group is a separate concept)
 - Password reset or email verification
 
 ### Implementation notes
+
 - The `enabled` field maps naturally to Spring Security's `UserDetails.isEnabled()` — `DaoAuthenticationProvider` will reject disabled accounts automatically if wired correctly
 - The seeded admin should be created via an `ApplicationRunner` or `@PostConstruct` bean that checks on every startup but only inserts if no `ADMIN`-role user exists (idempotent)
 - Consider adding `role` as a claim in the JWT so the filter does not need a DB lookup per request — but be aware this means role changes only take effect after re-login
 
 ---
 
-## Story 3 — CORS
+## Story 3 — CORS ✅ DONE
 
 > **As a frontend developer, I want the API to accept cross-origin requests from the React app,
 > so that the browser does not block my API calls.**
 
 ### Dependencies
+
 - Story 2 (Spring Security must be in place — CORS must be configured through it, not around it)
 
 ### Scope
+
 - Add `dashboarding.cors.allowed-origins` to `application.properties` (default: `http://localhost:3000`)
 - Register a `CorsConfigurationSource` bean inside `SecurityConfig` wired to the above property
 - Allow `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS` with `Authorization` and `Content-Type` headers
 - Integration test: preflight `OPTIONS` request returns `200` with correct CORS headers
 
 ### Does not include
+
 - Any domain changes
 
 ---
@@ -124,9 +138,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that only I can modify or delete it.**
 
 ### Dependencies
+
 - Story 2 (authenticated caller available in request context)
 
 ### Scope
+
 - Add nullable `owner` (`@ManyToOne User`) FK to `Widget` entity
 - `WidgetService.createWidget` — sets `owner` from the authenticated principal
 - `WidgetService.updateWidget` — rejects with `403` if caller is not the owner
@@ -135,6 +151,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: owner can update and delete their widget; another user cannot; `ownerId` appears in GET response
 
 ### Does not include
+
 - Group sharing (Story 10)
 - Widget list endpoint (Story 11)
 
@@ -146,9 +163,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can manage my personal dashboard collection.**
 
 ### Dependencies
+
 - Story 2 (authenticated caller)
 
 ### Scope
+
 - Add nullable `owner` (`@ManyToOne User`) FK to `Dashboard` entity
 - Add `DashboardService` — move business logic out of `DashboardController` (currently calls repository directly)
 - `POST /dashboards` — create dashboard (`name`); set owner from principal; return `{ id, name, createdAt }`
@@ -159,6 +178,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: full lifecycle (create → get → update → delete → confirm gone); `403` for wrong owner
 
 ### Does not include
+
 - Linking dashboards to a widget tree (Story 6)
 - Shareable URLs (Story 12)
 
@@ -170,10 +190,12 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can nest grids, slideshows, and leaf widgets inside it.**
 
 ### Dependencies
+
 - Story 4 (Widget ownership)
 - Story 5 (Dashboard CRUD and service layer)
 
 ### Scope
+
 - Add nullable `rootWidget` (`@ManyToOne Widget`) FK on `Dashboard` entity (`rootWidgetId`)
 - `POST /dashboards` — optionally accept a `rootWidgetId`; if omitted, auto-create a root widget of `widgetType = "dashboard"` owned by the same user
 - `GET /dashboards/{id}` — include the `rootWidgetId` in the response; optionally accept `?expand=tree` query param to return the full nested widget tree (recursive child expansion)
@@ -181,6 +203,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: create dashboard → verify root widget exists; delete dashboard → verify widget tree is soft-deleted; expand tree returns nested structure
 
 ### Does not include
+
 - Sharing (Story 10)
 
 ---
@@ -191,15 +214,18 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can change its settings after initial creation.**
 
 ### Dependencies
+
 - Story 4 (ownership check in place)
 
 ### Scope
+
 - Expand `UpdateWidgetRequest` to accept optional fields: `widgetType`, `version`, `configuration`, `configurationModel`, `dataEndpoints`
 - `WidgetService.updateWidget` — for each provided field, re-run `ConfigurationValidator` and `ConfigurationExtractor`; persist updated frontend config, secrets config, model, and endpoints
 - Ownership check already in place from Story 4 — no duplication needed
 - Integration tests: owner updates configuration → GET reflects new values; invalid config rejected with `400`; non-owner rejected with `403`
 
 ### Does not include
+
 - Cache invalidation on update (Story 14)
 
 ---
@@ -210,10 +236,12 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that accidental deletions can be recovered and foreign-key integrity is maintained.**
 
 ### Dependencies
+
 - Story 4 (ownership — must know who owns what before safely soft-deleting)
 - Story 6 (dashboard cascade soft-delete relies on this)
 
 ### Scope
+
 - Add `deletedAt` (nullable timestamp) to `Widget` entity
 - Change `WidgetService.deleteWidgetWithDescendants` — set `deletedAt = now()` on the widget and all descendants instead of hard-deleting
 - Update all repository queries to add `WHERE deleted_at IS NULL` guard: `findByParentId`, `findChildIdsByParentId`, `findAllDescendantIds`, `findAllAncestorIds`, `deleteWidgetTree` (rename to `softDeleteWidgetTree`)
@@ -222,6 +250,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: deleted widget is excluded from all queries; cleanup job hard-deletes records beyond retention threshold
 
 ### Does not include
+
 - Sharing guard on delete (Story 10 — share check added there)
 
 ---
@@ -232,9 +261,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can organise users for widget sharing.**
 
 ### Dependencies
+
 - Story 2 (authenticated caller)
 
 ### Scope
+
 - New `group` module (`nl.kabisa.dashboarding.group`)
 - `Group` entity: `id` (UUID), `name`, `createdAt`
 - `UserGroup` join entity: `userId`, `groupId`, `role` (`MEMBER` / `ADMIN`)
@@ -247,6 +278,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: create group, add member, list my groups, non-admin cannot add members
 
 ### Does not include
+
 - Widget sharing (Story 10)
 
 ---
@@ -257,11 +289,13 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that group members can use it in their dashboards without being able to change it.**
 
 ### Dependencies
+
 - Story 4 (widget ownership)
 - Story 8 (soft-delete guard must be in place — sharing blocks deletion)
 - Story 9 (groups exist)
 
 ### Scope
+
 - `WidgetShare` entity: `widgetId`, `groupId`, `permission` (`READ_ONLY` / `READ_WRITE`)
 - `POST /widget/{id}/share` — share with a group; body: `{ groupId, permission }`; owner only; `404` if group not found
 - `DELETE /widget/{id}/share/{groupId}` — revoke a share; owner only
@@ -272,6 +306,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: owner shares → group member can GET but not PUT or DELETE; owner revokes share → member loses access; owner cannot delete while shares are active
 
 ### Does not include
+
 - Widget list filtered by shares (Story 11)
 
 ---
@@ -282,10 +317,12 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can find and reuse existing widgets when building a dashboard.**
 
 ### Dependencies
+
 - Story 4 (ownership)
 - Story 10 (sharing — shared widgets must appear in the list)
 
 ### Scope
+
 - `GET /widgets` — returns widgets owned by the authenticated user plus widgets shared with any of the user's groups
 - Query parameters: `widgetType` (filter by type), `rootOnly=true` (only widgets without a parent)
 - Response: list of `WidgetSummary` (`id`, `widgetType`, `version`, `ownerId`, `ownerName`, `parentId`, `permission`); `permission` is `OWNER`, `READ_WRITE`, or `READ_ONLY`
@@ -300,9 +337,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that I can give others read-only access without requiring an account.**
 
 ### Dependencies
+
 - Story 5 (Dashboard CRUD — dashboard must have full lifecycle before adding share tokens)
 
 ### Scope
+
 - Add nullable `shareToken` (UUID) to `Dashboard` entity
 - `POST /dashboards/{id}/share` — generate and persist a random `shareToken`; return `{ shareUrl }`; owner only
 - `DELETE /dashboards/{id}/share` — set `shareToken = null`; owner only
@@ -311,6 +350,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests: generate token → public URL returns dashboard; revoke token → public URL returns `404`; unauthenticated caller can access public URL
 
 ### Does not include
+
 - Password protection (Story 13)
 
 ---
@@ -321,9 +361,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that only people I give the password to can view it.**
 
 ### Dependencies
+
 - Story 12 (share token mechanism must exist)
 
 ### Scope
+
 - Add `passwordHash` (nullable String) to `Dashboard` entity
 - `PUT /dashboards/{id}/password` — set or replace the password (BCrypt-hashed before storage); owner only
 - `DELETE /dashboards/{id}/password` — remove password requirement; owner only
@@ -338,9 +380,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that repeated requests do not hammer external services.**
 
 ### Dependencies
+
 - Story 7 (widget full update — cache must be invalidated when configuration changes)
 
 ### Scope
+
 - Add `spring-boot-starter-cache` + Caffeine to `pom.xml`
 - Enable `@EnableCaching` in the application
 - `WidgetEndpointsController.getWidgetEndpoint` — wrap step execution with a cache check; cache key: `widgetId + ":" + endpointName`; TTL from `DataEndpointModelItem.cache` (milliseconds); skip caching if `cache = 0`
@@ -348,6 +392,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Integration tests with WireMock: first call hits external service; second call within TTL does not; cache is evicted after widget update
 
 ### Does not include
+
 - Rate limiting (Story 15)
 
 ---
@@ -358,9 +403,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that misconfigured or malicious widgets cannot overwhelm external services.**
 
 ### Dependencies
+
 - Story 14 (caching infrastructure in place — rate limiting shares the same request interception point)
 
 ### Scope
+
 - Add `rateLimit` field (integer, requests per minute; `0` = unlimited) to `DataEndpointModelItem`
 - Add Bucket4j (+ Caffeine backend) to `pom.xml`
 - `WidgetEndpointsController.getWidgetEndpoint` — check rate limit bucket before executing steps; return `429 Too Many Requests` with `Retry-After` header when exceeded
@@ -375,9 +422,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that a database breach does not expose credentials in plaintext.**
 
 ### Dependencies
+
 - Story 7 (widget full update — hardened encryption applies to both create and update paths)
 
 ### Scope
+
 - Replace `EncryptionUtil` implementation: AES/GCM/NoPadding with a random 96-bit IV per operation
 - Remove the hardcoded `"widget-encryption-salt"` string; derive key from a configurable server-side master secret (`dashboarding.encryption.master-key` in `application.properties` / env var)
 - Store `IV + ciphertext` (Base64-encoded, colon-separated) in `secretsConfiguration`
@@ -393,9 +442,11 @@ Stories are written as vertical slices: each one delivers a working, testable in
 > so that deployments are safe, repeatable, and auditable.**
 
 ### Dependencies
+
 - Story 16 (last story that changes the data model — baseline migration written after the schema stabilises)
 
 ### Scope
+
 - Add `flyway-core` to `pom.xml`
 - Set `spring.jpa.hibernate.ddl-auto=validate` in `application.properties`
 - Write `V1__baseline.sql` — captures the full schema as it stands after Story 16 (widgets, dashboards, users, groups, user_groups, widget_shares tables with all columns and FK constraints)
@@ -408,10 +459,10 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ## Dependency map
 
 ```
-Story 1 (Users)
-  └─ Story 2 (Auth)
+Story 1 (Users ✅)
+  └─ Story 2 (Auth ✅)
        ├─ Story 2b (User roles & approval)
-       ├─ Story 3 (CORS)
+       ├─ Story 3 (CORS ✅)
        ├─ Story 4 (Widget ownership)
        │    ├─ Story 7 (Widget full update)
        │    │    ├─ Story 14 (Caching)
