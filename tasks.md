@@ -65,6 +65,40 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
+## Story 2b — User roles and approval
+
+> **As an administrator, I want newly registered users to require my approval before they can use the system,
+> so that I control who has access.**
+
+### Dependencies
+- Story 2 (Authentication — JWT and Spring Security must be in place)
+
+### Scope
+- Add `role` enum (`USER`, `ADMIN`) to `User` entity (default: `USER`)
+- Add `enabled` (boolean) to `User` entity (default: `false`) — unapproved users cannot authenticate
+- `POST /users` (register) — remains public; newly registered users are created with `role = USER` and `enabled = false`
+- `POST /auth/login` — reject login for disabled users with `403 Forbidden` and a clear message (e.g. "Account pending approval")
+- **Admin user seeding**: on application startup, if no admin exists, create one from config properties `dashboarding.admin.username`, `dashboarding.admin.email`, `dashboarding.admin.password`; this user gets `role = ADMIN` and `enabled = true`
+- `GET /users` — list all users with their `role` and `enabled` status; `ADMIN` only
+- `PUT /users/{id}/approve` — set `enabled = true`; `ADMIN` only; returns updated user profile; `404` if user not found
+- `PUT /users/{id}/role` — change a user's role (body: `{ "role": "ADMIN" | "USER" }`); `ADMIN` only; an admin cannot demote themselves
+- `UserDetailsServiceImpl` — read `role` from the `User` entity and map to `ROLE_USER` / `ROLE_ADMIN` granted authority (replace hardcoded `ROLE_USER`)
+- `JwtAuthenticationFilter` — include the role from the database rather than hardcoding `ROLE_USER`
+- `SecurityConfig` — add role-based access rules: `GET /users`, `PUT /users/{id}/approve`, and `PUT /users/{id}/role` require `ROLE_ADMIN`
+- `GET /users/me` — add `role` and `enabled` fields to `UserProfileResponse`
+- Integration tests: register → user is disabled → login rejected; admin approves → login succeeds; admin can list users; admin can change roles; non-admin cannot access admin endpoints (`403`); seeded admin exists on startup
+
+### Does not include
+- Group membership roles (Story 9 — `MEMBER` / `ADMIN` within a group is a separate concept)
+- Password reset or email verification
+
+### Implementation notes
+- The `enabled` field maps naturally to Spring Security's `UserDetails.isEnabled()` — `DaoAuthenticationProvider` will reject disabled accounts automatically if wired correctly
+- The seeded admin should be created via an `ApplicationRunner` or `@PostConstruct` bean that checks on every startup but only inserts if no `ADMIN`-role user exists (idempotent)
+- Consider adding `role` as a claim in the JWT so the filter does not need a DB lookup per request — but be aware this means role changes only take effect after re-login
+
+---
+
 ## Story 3 — CORS
 
 > **As a frontend developer, I want the API to accept cross-origin requests from the React app,
@@ -376,6 +410,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ```
 Story 1 (Users)
   └─ Story 2 (Auth)
+       ├─ Story 2b (User roles & approval)
        ├─ Story 3 (CORS)
        ├─ Story 4 (Widget ownership)
        │    ├─ Story 7 (Widget full update)
