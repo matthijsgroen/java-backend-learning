@@ -1,7 +1,6 @@
 package nl.kabisa.dashboarding.auth;
 
 import jakarta.validation.Valid;
-import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,14 +22,11 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final UserRepository userRepository;
 
     public AuthController(AuthenticationManager authenticationManager,
-                          JwtService jwtService,
-                          UserRepository userRepository) {
+                          JwtService jwtService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.userRepository = userRepository;
     }
 
     @PostMapping("/login")
@@ -42,11 +38,7 @@ public class AuthController {
                             request.password()));
 
             String userId = authentication.getName();
-            String username = userRepository.findById(UUID.fromString(userId))
-                    .map(u -> u.getUsername())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Authenticated user not found"));
-
-            String token = jwtService.generateToken(UUID.fromString(userId), username);
+            String token = jwtService.generateToken(UUID.fromString(userId), request.username());
             return ResponseEntity.ok(new LoginResponse(token));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401)
