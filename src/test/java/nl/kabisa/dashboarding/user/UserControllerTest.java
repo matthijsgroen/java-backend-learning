@@ -2,11 +2,13 @@ package nl.kabisa.dashboarding.user;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.kabisa.dashboarding.auth.JwtTestHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -32,6 +34,9 @@ public class UserControllerTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private JwtTestHelper jwtTestHelper;
 
     @BeforeEach
     void setUp() {
@@ -109,9 +114,10 @@ public class UserControllerTest {
                 .andReturn();
 
         String userId = extractIdFromResponse(registerResult);
+        String token = jwtTestHelper.mintToken(UUID.fromString(userId), "johndoe");
 
         mvc.perform(get("/users/me")
-                .header("X-User-Id", userId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId))
@@ -122,20 +128,30 @@ public class UserControllerTest {
 
     @Test
     public void getProfileWithNonExistentUserReturnsNotFound() throws Exception {
+        UUID randomId = UUID.randomUUID();
+        String token = jwtTestHelper.mintToken(randomId, "nobody");
+
         mvc.perform(get("/users/me")
-                .header("X-User-Id", UUID.randomUUID().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not Found"));
     }
 
     @Test
-    public void getProfileWithInvalidUuidReturnsBadRequest() throws Exception {
+    public void getProfileWithNoTokenReturnsUnauthorized() throws Exception {
+        mvc.perform(get("/users/me").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    public void getProfileWithInvalidTokenReturnsUnauthorized() throws Exception {
         mvc.perform(get("/users/me")
-                .header("X-User-Id", "not-a-uuid")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer invalidtoken")
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Bad Request"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
     }
 
     @Test
@@ -172,14 +188,5 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.status").value(422))
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.errors.password[0]").value("Password cannot be blank"));
-    }
-
-    @Test
-    public void getProfileWithMissingHeaderReturnsBadRequest() throws Exception {
-        mvc.perform(get("/users/me")
-                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Required header 'X-User-Id' is missing"));
     }
 }

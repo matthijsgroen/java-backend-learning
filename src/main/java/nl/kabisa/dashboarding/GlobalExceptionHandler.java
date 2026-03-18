@@ -3,7 +3,6 @@ package nl.kabisa.dashboarding;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -53,8 +52,8 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleJsonParseError(HttpMessageNotReadableException ex) {
         return Map.of(
-                "error", "JSON parsing failed",
-                "message", ex.getMessage());
+                "error", "Bad Request",
+                "message", "Malformed JSON request body");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -63,14 +62,6 @@ public class GlobalExceptionHandler {
         return Map.of(
                 "error", "Bad Request",
                 "message", ex.getMessage());
-    }
-
-    @ExceptionHandler(MissingRequestHeaderException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleMissingRequestHeader(MissingRequestHeaderException ex) {
-        return Map.of(
-                "error", "Bad Request",
-                "message", "Required header '" + ex.getHeaderName() + "' is missing");
     }
 
     // ── Widget module handlers ────────────────────────────────────────────

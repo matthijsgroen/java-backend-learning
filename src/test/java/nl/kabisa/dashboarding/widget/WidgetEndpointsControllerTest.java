@@ -2,18 +2,24 @@ package nl.kabisa.dashboarding.widget;
 
 import java.util.UUID;
 
+import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 
@@ -47,15 +53,35 @@ public class WidgetEndpointsControllerTest {
     @Autowired
     private WidgetRepository widgetRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTestHelper jwtTestHelper;
+
+    private User testUser;
+    private String authHeader;
+
     private WireMockServer wireMockServer;
     private String baseUrl;
 
     @BeforeEach
     void setUp() {
         widgetRepository.deleteAll();
+        userRepository.deleteAll();
+
+        testUser = new User();
+        testUser.setUsername("testuser");
+        testUser.setEmail("testuser@test.local");
+        testUser.setPasswordHash(passwordEncoder.encode("testpassword"));
+        testUser = userRepository.save(testUser);
+        authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
 
         // Start WireMock server on dynamic port
-        wireMockServer = new WireMockServer();
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         baseUrl = "http://localhost:" + wireMockServer.port();
         configureFor("localhost", wireMockServer.port());
@@ -77,7 +103,9 @@ public class WidgetEndpointsControllerTest {
     @Test
     public void widgetEndpointNotFound() throws Exception {
         MvcResult creationResult = mvc
-                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                .perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(WidgetTestFixtures.fullWidgetJson(baseUrl))
                         .accept(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -86,6 +114,7 @@ public class WidgetEndpointsControllerTest {
 
         mvc.perform(
                 MockMvcRequestBuilders.get("/widget/" + widgetId.toString() + "/endpoint/does-not-exist")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
@@ -111,7 +140,9 @@ public class WidgetEndpointsControllerTest {
                         .withBody(mockCalendarResult)));
 
         MvcResult creationResult = mvc
-                .perform(post("/widget").contentType(MediaType.APPLICATION_JSON)
+                .perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(WidgetTestFixtures.fullWidgetJson(baseUrl)))
                 .andReturn();
 
@@ -119,6 +150,7 @@ public class WidgetEndpointsControllerTest {
 
         mvc.perform(
                 MockMvcRequestBuilders.get("/widget/" + widgetId.toString() + "/endpoint/calendar")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

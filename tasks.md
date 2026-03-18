@@ -33,7 +33,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 2 — Authentication
+## Story 2 — Authentication ✅ DONE
 
 > **As a registered user, I want to log in and receive a token,
 > so that I can make authenticated API calls.**
@@ -58,9 +58,44 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - Ownership enforcement (Story 4)
 
 ### Implementation notes (carry-over from Story 1)
-- **`PasswordEncoder` bean**: already defined in `user/PasswordEncoderConfig.java` — move it into `SecurityConfig` (or keep it and `@Import` it) so it lives next to the rest of the security wiring
-- **`GET /users/me` stub**: currently reads `X-User-Id` header — replace with `SecurityContextHolder.getContext().getAuthentication().getName()` (JWT subject) and remove the `X-User-Id` header logic entirely
-- **Test helper**: consider a `@TestSecurityContext` utility or a `JwtTestHelper` that mints test tokens so all existing integration tests can keep running without reworking their MockMvc calls from scratch
+- **`PasswordEncoder` bean**: moved into `SecurityConfig` (the `user/PasswordEncoderConfig.java` was deleted)
+- **`GET /users/me` stub**: replaced with `Authentication` principal from `SecurityContextHolder` — `X-User-Id` header logic removed
+- **Test helper**: `JwtTestHelper` added in `src/test/java/nl/kabisa/dashboarding/auth/` — mints test tokens; all existing integration tests updated to use it
+- **Additional components**: `AuthEntryPoint` (401 responses), `AuthAccessDeniedHandler` (403 responses), `JwtAuthenticationFilter`, `JwtService`, `JwtProperties`, `UserDetailsServiceImpl`
+
+---
+
+## Story 2b — User roles and approval
+
+> **As an administrator, I want newly registered users to require my approval before they can use the system,
+> so that I control who has access.**
+
+### Dependencies
+- Story 2 (Authentication — JWT and Spring Security must be in place)
+
+### Scope
+- Add `role` enum (`USER`, `ADMIN`) to `User` entity (default: `USER`)
+- Add `enabled` (boolean) to `User` entity (default: `false`) — unapproved users cannot authenticate
+- `POST /users` (register) — remains public; newly registered users are created with `role = USER` and `enabled = false`
+- `POST /auth/login` — reject login for disabled users with `403 Forbidden` and a clear message (e.g. "Account pending approval")
+- **Admin user seeding**: on application startup, if no admin exists, create one from config properties `dashboarding.admin.username`, `dashboarding.admin.email`, `dashboarding.admin.password`; this user gets `role = ADMIN` and `enabled = true`
+- `GET /users` — list all users with their `role` and `enabled` status; `ADMIN` only
+- `PUT /users/{id}/approve` — set `enabled = true`; `ADMIN` only; returns updated user profile; `404` if user not found
+- `PUT /users/{id}/role` — change a user's role (body: `{ "role": "ADMIN" | "USER" }`); `ADMIN` only; an admin cannot demote themselves
+- `UserDetailsServiceImpl` — read `role` from the `User` entity and map to `ROLE_USER` / `ROLE_ADMIN` granted authority (replace hardcoded `ROLE_USER`)
+- `JwtAuthenticationFilter` — include the role from the database rather than hardcoding `ROLE_USER`
+- `SecurityConfig` — add role-based access rules: `GET /users`, `PUT /users/{id}/approve`, and `PUT /users/{id}/role` require `ROLE_ADMIN`
+- `GET /users/me` — add `role` and `enabled` fields to `UserProfileResponse`
+- Integration tests: register → user is disabled → login rejected; admin approves → login succeeds; admin can list users; admin can change roles; non-admin cannot access admin endpoints (`403`); seeded admin exists on startup
+
+### Does not include
+- Group membership roles (Story 9 — `MEMBER` / `ADMIN` within a group is a separate concept)
+- Password reset or email verification
+
+### Implementation notes
+- The `enabled` field maps naturally to Spring Security's `UserDetails.isEnabled()` — `DaoAuthenticationProvider` will reject disabled accounts automatically if wired correctly
+- The seeded admin should be created via an `ApplicationRunner` or `@PostConstruct` bean that checks on every startup but only inserts if no `ADMIN`-role user exists (idempotent)
+- Consider adding `role` as a claim in the JWT so the filter does not need a DB lookup per request — but be aware this means role changes only take effect after re-login
 
 ---
 
@@ -375,6 +410,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ```
 Story 1 (Users)
   └─ Story 2 (Auth)
+       ├─ Story 2b (User roles & approval)
        ├─ Story 3 (CORS)
        ├─ Story 4 (Widget ownership)
        │    ├─ Story 7 (Widget full update)
