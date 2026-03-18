@@ -15,11 +15,30 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
+    private static final int MIN_HMAC_KEY_BYTES = 32; // 256-bit key for HS256
+
     private final SecretKey signingKey;
     private final long expirationMs;
 
     public JwtService(JwtProperties jwtProperties) {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
+        String secret = jwtProperties.secret();
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT secret is not configured. Please set a Base64-encoded secret with at least "
+                    + MIN_HMAC_KEY_BYTES + " bytes (256 bits) for HS256.");
+        }
+
+        final byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secret);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT secret is not valid Base64. Please provide a valid Base64-encoded secret.", e);
+        }
+
+        if (keyBytes.length < MIN_HMAC_KEY_BYTES) {
+            throw new IllegalStateException("JWT secret is too short: decoded length is " + keyBytes.length
+                    + " bytes, but at least " + MIN_HMAC_KEY_BYTES + " bytes (256 bits) are required for HS256.");
+        }
+
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = jwtProperties.expirationMs();
     }
