@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import nl.kabisa.dashboarding.widget.configuration.ProxyConfiguration;
 import nl.kabisa.dashboarding.widget.dto.EndpointProcessingStep;
@@ -44,7 +45,7 @@ class ProxyRequestExecutorTest {
 
     @BeforeEach
     void setup() {
-        wireMockServer = new WireMockServer();
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         baseUrl = "http://localhost:" + wireMockServer.port();
         executor = new ProxyRequestExecutor(proxyConfiguration);

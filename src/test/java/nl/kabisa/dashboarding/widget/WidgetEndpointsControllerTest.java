@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import nl.kabisa.dashboarding.widget.orm.WidgetRepository;
 
@@ -80,7 +81,7 @@ public class WidgetEndpointsControllerTest {
         authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
 
         // Start WireMock server on dynamic port
-        wireMockServer = new WireMockServer();
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         baseUrl = "http://localhost:" + wireMockServer.port();
         configureFor("localhost", wireMockServer.port());
