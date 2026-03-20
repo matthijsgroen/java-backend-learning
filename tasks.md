@@ -132,7 +132,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 4 — Widget ownership
+## Story 4 — Widget ownership ✅ DONE
 
 > **As an authenticated user, I want every widget I create to be mine,
 > so that only I can modify or delete it.**
@@ -465,7 +465,7 @@ Story 1 (Users ✅)
   └─ Story 2 (Auth ✅)
        ├─ Story 2b (User roles & approval)
        ├─ Story 3 (CORS ✅)
-       ├─ Story 4 (Widget ownership)
+       ├─ Story 4 (Widget ownership ✅)
        │    ├─ Story 7 (Widget full update)
        │    │    ├─ Story 14 (Caching)
        │    │    │    └─ Story 15 (Rate limiting)
