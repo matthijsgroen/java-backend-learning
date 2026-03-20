@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -50,6 +48,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userId.get());
 
+                if (!userDetails.isEnabled()) {
+                    // User exists but account is not approved yet.
+                    // Do not authenticate — let Spring Security return 401 via AuthEntryPoint.
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
@@ -59,23 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } catch (UsernameNotFoundException e) {
-                // Valid JWT but user no longer exists in DB (e.g. account was deleted).
-                // Still authenticate with the user ID from the token so that the request
-                // can reach the controller and return a meaningful 404 response.
-                UserDetails stub = org.springframework.security.core.userdetails.User
-                        .withUsername(userId.get())
-                        .password("")
-                        .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
-                        .build();
-
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                stub,
-                                null,
-                                stub.getAuthorities());
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                // Valid JWT but user no longer exists in DB.
+                // Do not authenticate — return 401 via AuthEntryPoint.
             }
         }
 

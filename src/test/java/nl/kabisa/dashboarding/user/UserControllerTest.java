@@ -3,6 +3,9 @@ package nl.kabisa.dashboarding.user;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.Role;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,13 +16,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import nl.kabisa.dashboarding.user.orm.UserRepository;
-
 import java.util.UUID;
 
 import static nl.kabisa.dashboarding.user.UserTestFixtures.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,6 +52,16 @@ public class UserControllerTest {
         return root.get("id").asText();
     }
 
+    /**
+     * Enables a user in the DB to simulate admin approval.
+     * Used in tests that need to access authenticated endpoints after registration.
+     */
+    private void enableUser(String userId) {
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow();
+        user.setEnabled(true);
+        userRepository.save(user);
+    }
+
     @Test
     public void registerSucceeds() throws Exception {
         MvcResult result = mvc
@@ -67,6 +79,42 @@ public class UserControllerTest {
         String id = extractIdFromResponse(result);
         assertDoesNotThrow(() -> UUID.fromString(id), "id should be a valid UUID");
         assertEquals(1, userRepository.count());
+    }
+
+    @Test
+    public void registeredUserIsDisabledByDefault() throws Exception {
+        MvcResult result = mvc
+                .perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(REGISTER_USER_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String userId = extractIdFromResponse(result);
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow();
+        assertFalse(user.isEnabled(), "Newly registered user should be disabled by default");
+        assertEquals(Role.USER, user.getRole(), "Newly registered user should have role USER");
+    }
+
+    @Test
+    public void disabledUserWithValidTokenReturnsUnauthorized() throws Exception {
+        MvcResult result = mvc
+                .perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(REGISTER_USER_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        // Do NOT enable the user — they are disabled by default after registration
+        String userId = extractIdFromResponse(result);
+        String token = jwtTestHelper.mintToken(UUID.fromString(userId), "johndoe");
+
+        mvc.perform(get("/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -114,6 +162,8 @@ public class UserControllerTest {
                 .andReturn();
 
         String userId = extractIdFromResponse(registerResult);
+        // Simulate admin approval before accessing authenticated endpoint
+        enableUser(userId);
         String token = jwtTestHelper.mintToken(UUID.fromString(userId), "johndoe");
 
         mvc.perform(get("/users/me")
@@ -123,19 +173,23 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.id").value(userId))
                 .andExpect(jsonPath("$.username").value("johndoe"))
                 .andExpect(jsonPath("$.email").value("john@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.enabled").value(true))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty());
     }
 
     @Test
-    public void getProfileWithNonExistentUserReturnsNotFound() throws Exception {
+    public void getProfileWithNonExistentUserReturnsUnauthorized() throws Exception {
+        // With the stub fallback removed, a JWT for a non-existent user is treated as
+        // unauthenticated — Spring Security returns 401 via AuthEntryPoint.
         UUID randomId = UUID.randomUUID();
         String token = jwtTestHelper.mintToken(randomId, "nobody");
 
         mvc.perform(get("/users/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Not Found"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
     }
 
     @Test

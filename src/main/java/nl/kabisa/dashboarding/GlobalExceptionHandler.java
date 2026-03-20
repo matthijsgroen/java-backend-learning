@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import nl.kabisa.dashboarding.user.DuplicateEmailException;
 import nl.kabisa.dashboarding.user.DuplicateUsernameException;
+import nl.kabisa.dashboarding.user.SelfDemotionException;
 import nl.kabisa.dashboarding.user.UserNotFoundException;
 import nl.kabisa.dashboarding.widget.ConfigurationValidationException;
 import nl.kabisa.dashboarding.widget.EndpointNotFoundException;
@@ -122,6 +123,14 @@ public class GlobalExceptionHandler {
     public Map<String, String> handleUserNotFound(UserNotFoundException ex) {
         return Map.of(
                 "error", "Not Found",
+                "message", ex.getMessage());
+    }
+
+    @ExceptionHandler(SelfDemotionException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleSelfDemotion(SelfDemotionException ex) {
+        return Map.of(
+                "error", "Conflict",
                 "message", ex.getMessage());
     }
 }

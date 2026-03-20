@@ -1,5 +1,6 @@
 package nl.kabisa.dashboarding.auth;
 
+import nl.kabisa.dashboarding.user.orm.Role;
 import nl.kabisa.dashboarding.user.orm.User;
 import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,8 @@ class AuthControllerTest {
         user.setUsername("loginuser");
         user.setEmail("loginuser@test.local");
         user.setPasswordHash(passwordEncoder.encode("password123"));
+        user.setRole(Role.USER);
+        user.setEnabled(true);
         userRepository.save(user);
     }
 
@@ -63,5 +66,23 @@ class AuthControllerTest {
                 .content("{\"username\": \"nobody\", \"password\": \"password123\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    void loginWithDisabledUserReturnsForbidden() throws Exception {
+        User disabledUser = new User();
+        disabledUser.setUsername("disabled");
+        disabledUser.setEmail("disabled@test.local");
+        disabledUser.setPasswordHash(passwordEncoder.encode("password123"));
+        disabledUser.setRole(Role.USER);
+        disabledUser.setEnabled(false);
+        userRepository.save(disabledUser);
+
+        mvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\": \"disabled\", \"password\": \"password123\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("Account pending approval"));
     }
 }

@@ -1,13 +1,14 @@
 package nl.kabisa.dashboarding.user;
 
-import java.util.UUID;
-
+import nl.kabisa.dashboarding.user.orm.Role;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import nl.kabisa.dashboarding.user.orm.User;
-import nl.kabisa.dashboarding.user.orm.UserRepository;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -33,6 +34,7 @@ public class UserService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
+        // New users default to role=USER and enabled=false (require admin approval)
 
         return userRepository.save(user);
     }
@@ -41,5 +43,29 @@ public class UserService {
     public User getUserById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    @Transactional
+    public User approveUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+        user.setEnabled(true); // idempotent: already-enabled users stay enabled
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User changeRole(UUID targetUserId, Role newRole, UUID actingAdminId) {
+        if (targetUserId.equals(actingAdminId)) {
+            throw new SelfDemotionException();
+        }
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new UserNotFoundException(targetUserId));
+        user.setRole(newRole);
+        return userRepository.save(user);
     }
 }

@@ -1,6 +1,7 @@
 package nl.kabisa.dashboarding.dashboard;
 
 import nl.kabisa.dashboarding.auth.JwtTestHelper;
+import nl.kabisa.dashboarding.user.orm.Role;
 import nl.kabisa.dashboarding.user.orm.User;
 import nl.kabisa.dashboarding.user.orm.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +57,8 @@ class DashboardControllerTest {
         testUser.setUsername("testuser");
         testUser.setEmail("testuser@test.local");
         testUser.setPasswordHash(passwordEncoder.encode("testpassword"));
+        testUser.setRole(Role.USER);
+        testUser.setEnabled(true);
         testUser = userRepository.save(testUser);
         authHeader = jwtTestHelper.bearerHeader(testUser.getId(), testUser.getUsername());
     }

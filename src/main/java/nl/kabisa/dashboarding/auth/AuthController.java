@@ -5,13 +5,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +40,9 @@ public class AuthController {
             String userId = authentication.getName();
             String token = jwtService.generateToken(UUID.fromString(userId), request.username());
             return ResponseEntity.ok(new LoginResponse(token));
+        } catch (DisabledException e) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("error", "Forbidden", "message", "Account pending approval"));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401)
                     .body(Map.of("error", "Unauthorized", "message", "Invalid username or password"));
