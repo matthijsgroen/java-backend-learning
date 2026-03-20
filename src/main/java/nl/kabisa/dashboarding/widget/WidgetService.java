@@ -7,6 +7,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import nl.kabisa.dashboarding.user.UserNotFoundException;
+import nl.kabisa.dashboarding.user.orm.User;
+import nl.kabisa.dashboarding.user.orm.UserRepository;
 import nl.kabisa.dashboarding.widget.configuration.ConfigurationExtractor;
 import nl.kabisa.dashboarding.widget.configuration.ConfigurationValidator;
 import nl.kabisa.dashboarding.widget.orm.Widget;
@@ -18,13 +21,21 @@ public class WidgetService {
     public record WidgetWithChildren(Widget widget, List<UUID> childIds) {}
 
     private final WidgetRepository widgetRepository;
+    private final UserRepository userRepository;
 
-    public WidgetService(WidgetRepository widgetRepository) {
+    public WidgetService(WidgetRepository widgetRepository, UserRepository userRepository) {
         this.widgetRepository = widgetRepository;
+        this.userRepository = userRepository;
+    }
+
+    private void assertIsOwner(Widget widget, UUID callerId) {
+        if (!widget.getOwner().getId().equals(callerId)) {
+            throw new WidgetAccessDeniedException();
+        }
     }
 
     @Transactional
-    public Widget createWidget(CreateWidgetRequest request) {
+    public Widget createWidget(UUID callerId, CreateWidgetRequest request) {
         ConfigurationValidator.validate(request.configuration(), request.configurationModel());
 
         Map<String, Object> frontendConfiguration = ConfigurationExtractor.extractFrontend(
@@ -34,6 +45,9 @@ public class WidgetService {
 
         Widget parent = resolveParent(request.parentId());
 
+        User owner = userRepository.findById(callerId)
+                .orElseThrow(() -> new UserNotFoundException(callerId));
+
         Widget widget = new Widget();
         widget.setWidgetType(request.widgetType());
         widget.setVersion(request.version());
@@ -42,6 +56,7 @@ public class WidgetService {
         widget.setConfigurationModel(request.configurationModel());
         widget.setEndpoints(request.dataEndpoints());
         widget.setParent(parent);
+        widget.setOwner(owner);
 
         return widgetRepository.save(widget);
     }
@@ -50,37 +65,35 @@ public class WidgetService {
      * Fetches a widget and its direct child IDs in a single transaction for a consistent snapshot.
      */
     @Transactional(readOnly = true)
-    public WidgetWithChildren getWidgetWithChildren(UUID id) {
+    public WidgetWithChildren getWidgetWithChildren(UUID callerId, UUID id) {
         Widget widget = widgetRepository.findById(id)
                 .orElseThrow(() -> new WidgetNotFoundException(id));
+        assertIsOwner(widget, callerId);
         List<UUID> childIds = widgetRepository.findChildIdsByParentId(id);
         return new WidgetWithChildren(widget, childIds);
     }
 
     @Transactional(readOnly = true)
-    public Widget getWidget(UUID id) {
-        return widgetRepository.findById(id)
+    public Widget getWidget(UUID callerId, UUID id) {
+        Widget widget = widgetRepository.findById(id)
                 .orElseThrow(() -> new WidgetNotFoundException(id));
+        assertIsOwner(widget, callerId);
+        return widget;
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getChildIds(UUID widgetId) {
-        widgetRepository.findById(widgetId)
-                .orElseThrow(() -> new WidgetNotFoundException(widgetId));
-        return widgetRepository.findChildIdsByParentId(widgetId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Widget> getChildren(UUID parentId) {
-        widgetRepository.findById(parentId)
+    public List<Widget> getChildren(UUID callerId, UUID parentId) {
+        Widget parent = widgetRepository.findById(parentId)
                 .orElseThrow(() -> new WidgetNotFoundException(parentId));
+        assertIsOwner(parent, callerId);
         return widgetRepository.findByParentId(parentId);
     }
 
     @Transactional
-    public Widget updateWidget(UUID widgetId, UpdateWidgetRequest request) {
+    public Widget updateWidget(UUID callerId, UUID widgetId, UpdateWidgetRequest request) {
         Widget widget = widgetRepository.findById(widgetId)
                 .orElseThrow(() -> new WidgetNotFoundException(widgetId));
+        assertIsOwner(widget, callerId);
 
         if (request.parentId() != null) {
             UUID parentUuid = parseUuid(request.parentId(), "parent widget id");
@@ -96,13 +109,13 @@ public class WidgetService {
     }
 
     @Transactional
-    public int deleteWidgetWithDescendants(UUID widgetId) {
-        if (!widgetRepository.existsById(widgetId)) {
-            throw new WidgetNotFoundException(widgetId);
-        }
+    public int deleteWidgetWithDescendants(UUID callerId, UUID widgetId) {
+        Widget widget = widgetRepository.findById(widgetId)
+                .orElseThrow(() -> new WidgetNotFoundException(widgetId));
+        assertIsOwner(widget, callerId);
         int result = widgetRepository.deleteWidgetTree(widgetId);
         if (result == 0) {
-            // Race condition: widget was deleted between existsById and deleteWidgetTree
+            // Race condition: widget was deleted between findById and deleteWidgetTree
             throw new WidgetNotFoundException(widgetId);
         }
         return result;

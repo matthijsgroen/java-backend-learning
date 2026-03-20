@@ -12,6 +12,7 @@ import nl.kabisa.dashboarding.user.DuplicateUsernameException;
 import nl.kabisa.dashboarding.user.UserNotFoundException;
 import nl.kabisa.dashboarding.widget.ConfigurationValidationException;
 import nl.kabisa.dashboarding.widget.EndpointNotFoundException;
+import nl.kabisa.dashboarding.widget.WidgetAccessDeniedException;
 import nl.kabisa.dashboarding.widget.WidgetCycleException;
 import nl.kabisa.dashboarding.widget.WidgetNotFoundException;
 
@@ -97,6 +98,14 @@ public class GlobalExceptionHandler {
         return Map.of(
                 "error", "Conflict",
                 "message", ex.getMessage());
+    }
+
+    @ExceptionHandler(WidgetAccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, String> handleWidgetAccessDenied(WidgetAccessDeniedException ex) {
+        return Map.of(
+                "error", "Forbidden",
+                "message", "Access denied");
     }
 
     // ── User module handlers ──────────────────────────────────────────────

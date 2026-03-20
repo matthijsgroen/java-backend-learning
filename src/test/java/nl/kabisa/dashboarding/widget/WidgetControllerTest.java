@@ -187,10 +187,12 @@ public class WidgetControllerTest {
                                 .andExpect(jsonPath("$.configuration.title").value("Lunch & Learn binnenkort"))
                                 .andExpect(jsonPath("$.configuration.lookAhead").value(60))
                                 .andExpect(jsonPath("$.configuration.lookBack").value(0))
-                                .andExpect(jsonPath("$.configuration.secretIcalUrl").doesNotExist())
-                                .andExpect(jsonPath("$.parentId").doesNotExist())
-                                .andExpect(jsonPath("$.childIds").isArray())
-                                .andReturn();
+                .andExpect(jsonPath("$.configuration.secretIcalUrl").doesNotExist())
+                .andExpect(jsonPath("$.parentId").doesNotExist())
+                .andExpect(jsonPath("$.childIds").isArray())
+                .andExpect(jsonPath("$.ownerId").value(testUser.getId().toString()))
+                .andExpect(jsonPath("$.ownerName").value("testuser"))
+                .andReturn();
         }
 
         @Test
