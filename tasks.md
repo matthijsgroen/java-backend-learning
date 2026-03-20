@@ -72,7 +72,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 2b — User roles and approval
+## Story 2b — User roles and approval ✅ DONE
 
 > **As an administrator, I want newly registered users to require my approval before they can use the system,
 > so that I control who has access.**
@@ -107,6 +107,13 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - The `enabled` field maps naturally to Spring Security's `UserDetails.isEnabled()` — `DaoAuthenticationProvider` will reject disabled accounts automatically if wired correctly
 - The seeded admin should be created via an `ApplicationRunner` or `@PostConstruct` bean that checks on every startup but only inserts if no `ADMIN`-role user exists (idempotent)
 - Consider adding `role` as a claim in the JWT so the filter does not need a DB lookup per request — but be aware this means role changes only take effect after re-login
+- **Decided against role in JWT**: role is always loaded from DB on every request — role changes take effect immediately without re-login
+- **Admin seeder**: implemented as `ApplicationRunner` bean (`AdminSeeder.java`); reads from `@ConfigurationProperties(prefix="dashboarding.admin")`; app fails to start if `dashboarding.admin.password` is not set
+- **`PUT /users/{id}/approve`**: idempotent — returns `200 OK` even if user is already enabled
+- **`GET /users`**: returns a flat list (no pagination) with `id`, `username`, `email`, `role`, `enabled`, `createdAt`
+- **Self-demotion guard**: `SelfDemotionException` thrown by `UserService.changeRole` when an admin attempts to change their own role; mapped to `409 Conflict` by `GlobalExceptionHandler`
+- **JWT filter stub removed**: unknown users (valid JWT but no DB record) now get `401` — `UserControllerTest.getProfileWithNonExistentUser` renamed to `...ReturnsUnauthorized` and updated accordingly
+- **`@DirtiesContext(classMode = BEFORE_CLASS)`** on `AdminSeederTest` ensures a fresh Spring context so the seeder runs before assertions, regardless of test execution order
 
 ---
 
@@ -461,7 +468,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 ```
 Story 1 (Users ✅)
   └─ Story 2 (Auth ✅)
-       ├─ Story 2b (User roles & approval)
+       ├─ Story 2b (User roles & approval ✅)
        ├─ Story 3 (CORS ✅)
        ├─ Story 4 (Widget ownership)
        │    ├─ Story 7 (Widget full update)
