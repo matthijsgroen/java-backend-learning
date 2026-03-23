@@ -132,7 +132,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ---
 
-## Story 4 — Widget ownership
+## Story 4 — Widget ownership ✅ DONE
 
 > **As an authenticated user, I want every widget I create to be mine,
 > so that only I can modify or delete it.**
@@ -143,12 +143,13 @@ Stories are written as vertical slices: each one delivers a working, testable in
 
 ### Scope
 
-- Add nullable `owner` (`@ManyToOne User`) FK to `Widget` entity
-- `WidgetService.createWidget` — sets `owner` from the authenticated principal
-- `WidgetService.updateWidget` — rejects with `403` if caller is not the owner
-- `WidgetService.deleteWidgetWithDescendants` — rejects with `403` if caller is not the owner
+- Add `owner` (`@ManyToOne(EAGER) User`, `NOT NULL`) FK to `Widget` entity
+- `WidgetService.createWidget` — sets `owner` from the authenticated principal; returns `404` if the caller's user record is not found
+- All read and write operations (`getWidget`, `getWidgetWithChildren`, `getChildren`, `updateWidget`, `deleteWidgetWithDescendants`, `getWidgetEndpoint`) — reject with `403` if the caller is not the owner; `404` always precedes `403` (widget is looked up first, then ownership is asserted)
+- Access control is JWT-stateless: deleted users retain access to their widgets until their token expires
 - Add `ownerId` and `ownerName` to `GetWidgetResponse` and `WidgetChildSummary`
-- Integration tests: owner can update and delete their widget; another user cannot; `ownerId` appears in GET response
+- `GET /widget/{id}/children` returns all direct children regardless of each child's owner (parent-owner sees all children); child visibility for non-owners will be revisited in Story 10
+- Integration tests: owner can read, update, and delete their widget; another user is rejected with `403`; non-existent widget returns `404` (not `403`); `ownerId`/`ownerName` appear in GET and children responses
 
 ### Does not include
 
@@ -303,6 +304,7 @@ Stories are written as vertical slices: each one delivers a working, testable in
 - **Deletion guard**: `WidgetService.deleteWidgetWithDescendants` — check for active `WidgetShare` entries before soft-deleting; reject with `409 Conflict` if any exist
 - **Read-only enforcement**: `WidgetService.updateWidget` — if caller is a group member (not owner), reject `PUT` with `403`
 - `GetWidgetResponse` — add `shares: [{ groupId, groupName, permission }]` (visible to owner only; omitted for non-owners)
+- **`GET /widget/{id}/children`**: currently returns all direct children regardless of who owns each child (the parent owner sees children owned by others). When sharing is introduced, revisit this endpoint — a shared-read caller should only see children they also have access to, and the ownership / permission model for child visibility needs to be explicitly defined.
 - Integration tests: owner shares → group member can GET but not PUT or DELETE; owner revokes share → member loses access; owner cannot delete while shares are active
 
 ### Does not include
@@ -463,7 +465,7 @@ Story 1 (Users ✅)
   └─ Story 2 (Auth ✅)
        ├─ Story 2b (User roles & approval)
        ├─ Story 3 (CORS ✅)
-       ├─ Story 4 (Widget ownership)
+       ├─ Story 4 (Widget ownership ✅)
        │    ├─ Story 7 (Widget full update)
        │    │    ├─ Story 14 (Caching)
        │    │    │    └─ Story 15 (Rate limiting)

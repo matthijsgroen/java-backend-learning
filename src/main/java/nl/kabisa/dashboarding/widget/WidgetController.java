@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,16 +28,22 @@ public class WidgetController {
     }
 
     @PostMapping("/widget")
-    public ResponseEntity<CreateWidgetResponse> createWidget(@Valid @RequestBody CreateWidgetRequest request) {
-        Widget saved = widgetService.createWidget(request);
+    public ResponseEntity<CreateWidgetResponse> createWidget(
+            Authentication authentication,
+            @Valid @RequestBody CreateWidgetRequest request) {
+        UUID callerId = UUID.fromString(authentication.getName());
+        Widget saved = widgetService.createWidget(callerId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new CreateWidgetResponse(saved.getId().toString(), "Widget created successfully"));
     }
 
     @GetMapping("/widget/{id}")
-    public ResponseEntity<GetWidgetResponse> getWidget(@PathVariable String id) {
+    public ResponseEntity<GetWidgetResponse> getWidget(
+            Authentication authentication,
+            @PathVariable String id) {
+        UUID callerId = UUID.fromString(authentication.getName());
         UUID widgetId = parseWidgetId(id);
-        WidgetService.WidgetWithChildren result = widgetService.getWidgetWithChildren(widgetId);
+        WidgetService.WidgetWithChildren result = widgetService.getWidgetWithChildren(callerId, widgetId);
         Widget widget = result.widget();
 
         UUID parentId = widget.getParentId();
@@ -46,24 +53,31 @@ public class WidgetController {
                 widget.getVersion(),
                 widget.getFrontendConfiguration(),
                 parentId != null ? parentId.toString() : null,
-                result.childIds().stream().map(UUID::toString).toList());
+                result.childIds().stream().map(UUID::toString).toList(),
+                widget.getOwner().getId().toString(),
+                widget.getOwner().getUsername());
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/widget/{id}")
     public ResponseEntity<UpdateWidgetResponse> updateWidget(
+            Authentication authentication,
             @PathVariable String id,
             @Valid @RequestBody UpdateWidgetRequest request) {
+        UUID callerId = UUID.fromString(authentication.getName());
         UUID widgetId = parseWidgetId(id);
-        Widget updated = widgetService.updateWidget(widgetId, request);
+        Widget updated = widgetService.updateWidget(callerId, widgetId, request);
         return ResponseEntity.ok(
                 new UpdateWidgetResponse(updated.getId().toString(), "Widget updated successfully"));
     }
 
     @DeleteMapping("/widget/{id}")
-    public ResponseEntity<DeleteWidgetResponse> deleteWidget(@PathVariable String id) {
+    public ResponseEntity<DeleteWidgetResponse> deleteWidget(
+            Authentication authentication,
+            @PathVariable String id) {
+        UUID callerId = UUID.fromString(authentication.getName());
         UUID widgetId = parseWidgetId(id);
-        int count = widgetService.deleteWidgetWithDescendants(widgetId);
+        int count = widgetService.deleteWidgetWithDescendants(callerId, widgetId);
         String message = count == 1
                 ? "Widget deleted (no descendants)"
                 : "Widget and " + (count - 1) + " descendant(s) deleted";
@@ -71,9 +85,12 @@ public class WidgetController {
     }
 
     @GetMapping("/widget/{id}/children")
-    public ResponseEntity<List<WidgetChildSummary>> getWidgetChildren(@PathVariable String id) {
+    public ResponseEntity<List<WidgetChildSummary>> getWidgetChildren(
+            Authentication authentication,
+            @PathVariable String id) {
+        UUID callerId = UUID.fromString(authentication.getName());
         UUID widgetId = parseWidgetId(id);
-        List<Widget> children = widgetService.getChildren(widgetId);
+        List<Widget> children = widgetService.getChildren(callerId, widgetId);
         List<WidgetChildSummary> summaries = children.stream()
                 .map(w -> {
                     UUID pid = w.getParentId();
@@ -81,7 +98,9 @@ public class WidgetController {
                             w.getId().toString(),
                             w.getWidgetType(),
                             w.getVersion(),
-                            pid != null ? pid.toString() : null);
+                            pid != null ? pid.toString() : null,
+                            w.getOwner().getId().toString(),
+                            w.getOwner().getUsername());
                 })
                 .toList();
         return ResponseEntity.ok(summaries);

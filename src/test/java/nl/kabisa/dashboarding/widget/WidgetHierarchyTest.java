@@ -113,7 +113,9 @@ public class WidgetHierarchyTest {
                         .header(HttpHeaders.AUTHORIZATION, authHeader)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.parentId").value(parentId.toString()));
+                .andExpect(jsonPath("$.parentId").value(parentId.toString()))
+                .andExpect(jsonPath("$.ownerId").value(testUser.getId().toString()))
+                .andExpect(jsonPath("$.ownerName").value("testuser"));
     }
 
     @Test
@@ -204,7 +206,9 @@ public class WidgetHierarchyTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(childId.toString()));
+                .andExpect(jsonPath("$[0].id").value(childId.toString()))
+                .andExpect(jsonPath("$[0].ownerId").value(testUser.getId().toString()))
+                .andExpect(jsonPath("$[0].ownerName").value("testuser"));
     }
 
     @Test

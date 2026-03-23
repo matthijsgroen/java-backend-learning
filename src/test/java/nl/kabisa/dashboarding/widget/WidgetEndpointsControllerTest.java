@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -42,8 +43,8 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
-        "dashboarding.proxy.allowed-schemes=http,https",
-        "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
+    "dashboarding.proxy.allowed-schemes=http,https",
+    "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
 })
 public class WidgetEndpointsControllerTest {
 
@@ -156,7 +157,34 @@ public class WidgetEndpointsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", equalTo("application/json")))
                 .andExpect(content().string(equalTo(mockCalendarResult)));
+    }
 
+    @Test
+    public void nonOwnerCannotAccessWidgetEndpoint() throws Exception {
+        User bob = new User();
+        bob.setUsername("bob");
+        bob.setEmail("bob@test.local");
+        bob.setPasswordHash(passwordEncoder.encode("bobpass"));
+        bob = userRepository.save(bob);
+        String bobHeader = jwtTestHelper.bearerHeader(bob.getId(), bob.getUsername());
+
+        // testUser creates a widget
+        MvcResult creationResult = mvc
+                .perform(post("/widget")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(WidgetTestFixtures.fullWidgetJson(baseUrl))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andReturn();
+        UUID widgetId = extractIdFromResponse(creationResult);
+
+        // bob tries to access testUser's endpoint
+        mvc.perform(
+                MockMvcRequestBuilders.get("/widget/" + widgetId + "/endpoint/calendar")
+                        .header(HttpHeaders.AUTHORIZATION, bobHeader)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("Forbidden"));
     }
 
 }
