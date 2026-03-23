@@ -43,8 +43,8 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
-        "dashboarding.proxy.allowed-schemes=http,https",
-        "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
+    "dashboarding.proxy.allowed-schemes=http,https",
+    "dashboarding.proxy.allowed-hosts=localhost,api.example.com,data.trusted-service.com"
 })
 public class WidgetEndpointsControllerTest {
 
@@ -122,7 +122,8 @@ public class WidgetEndpointsControllerTest {
     }
 
     @Test
-    public void useCustomWidgetEndpoint() throws Exception {        String mockCalendarResult = """
+    public void useCustomWidgetEndpoint() throws Exception {
+        String mockCalendarResult = """
                 {
                     "events": [
                         {
