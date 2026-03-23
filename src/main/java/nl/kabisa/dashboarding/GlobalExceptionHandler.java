@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
     public Map<String, String> handleWidgetAccessDenied(WidgetAccessDeniedException ex) {
         return Map.of(
                 "error", "Forbidden",
-                "message", "Access denied");
+                "message", ex.getMessage());
     }
 
     // ── User module handlers ──────────────────────────────────────────────
